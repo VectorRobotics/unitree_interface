@@ -10,8 +10,6 @@ digraph ControlModeFSM {
 
     // monostate
     None -> Idle;
-    None -> High;
-    None -> Low;
     None -> Emergency;
 
     // IdleMode

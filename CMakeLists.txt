@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(joint_cmd_mux)
+project(unitree_interface)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -26,7 +26,7 @@ set(srv_files
   "interfaces/srv/ChangeControlMode.srv"
 )
 
-rosidl_generate_interfaces(${PROJECT_NAME}
+rosidl_generate_interfaces(unitree_interface
   ${srv_files}
   DEPENDENCIES
     builtin_interfaces
@@ -35,52 +35,54 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 ament_export_dependencies(rosidl_default_runtime)
 
 rosidl_get_typesupport_target(typesupport_target
-  ${PROJECT_NAME} rosidl_typesupport_cpp)
+  unitree_interface rosidl_typesupport_cpp)
 
 # Create the library
-add_library(joint_cmd_mux_lib
+add_library(unitree_interface_lib
   STATIC
-    src/joint_cmd_mux.cpp
-    src/control_modes.cpp
     src/unitree_interface.cpp
+    src/control_modes.cpp
+    src/unitree_sdk_wrapper.cpp
+    src/mode_transitions.cpp
 )
 
-target_include_directories(joint_cmd_mux_lib
+target_include_directories(unitree_interface_lib
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
 
-target_precompile_headers(joint_cmd_mux_lib
-  PRIVATE
-    include/${CMAKE_PROJECT_NAME}/pch.hpp
-)
+# Not decreasing compile time for some reason
+# target_precompile_headers(unitree_interface_lib
+#   PRIVATE
+#     include/unitree_interface/pch.hpp
+# )
 
-target_link_libraries(joint_cmd_mux_lib
+target_link_libraries(unitree_interface_lib
   "${typesupport_target}"
   unitree_sdk2
 )
 
-ament_target_dependencies(joint_cmd_mux_lib
+ament_target_dependencies(unitree_interface_lib
   rclcpp
   geometry_msgs
 )
 
 # Create the executable
-add_executable(joint_cmd_mux_node
-  src/joint_cmd_mux_node.cpp
+add_executable(unitree_interface_node
+  src/unitree_interface_node.cpp
 )
 
-target_link_libraries(joint_cmd_mux_node
-  joint_cmd_mux_lib
+target_link_libraries(unitree_interface_node
+  unitree_interface_lib
 )
 
-install(TARGETS joint_cmd_mux_node
-  DESTINATION lib/${PROJECT_NAME}
+install(TARGETS unitree_interface_node
+  DESTINATION lib/unitree_interface
 )
 
 install(DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}
+  DESTINATION share/unitree_interface
 )
 
 if(BUILD_TESTING)
@@ -92,16 +94,16 @@ if(BUILD_TESTING)
   )
 
   target_link_libraries(test_control_modes
-    joint_cmd_mux_lib
+    unitree_interface_lib
   )
 
-  # Test joint_cmd_mux
-  ament_add_gtest(test_joint_cmd_mux
-    test/test_joint_cmd_mux.cpp
+  # Test unitree_interface
+  ament_add_gtest(test_unitree_interface
+    test/test_unitree_interface.cpp
   )
 
-  target_link_libraries(test_joint_cmd_mux
-    joint_cmd_mux_lib
+  target_link_libraries(test_unitree_interface
+    unitree_interface_lib
   )
 endif()
 

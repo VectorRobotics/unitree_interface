@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>joint_cmd_mux</name>
+  <name>unitree_interface</name>
   <version>0.0.0</version>
-  <description>A ROS 2 package that multiplexes commands from multiple commanders</description>
+  <description>A ROS 2 package that acts an in-between between the vector software stack and the G1</description>
   <maintainer email="karankha@andrew.cmu.edu">Karan Khanna</maintainer>
   <license>MIT</license>
 
