@@ -5,7 +5,7 @@
 namespace unitree_interface {
 
     UnitreeInterface::UnitreeInterface(const rclcpp::NodeOptions& options)
-        : Node("joint_cmd_mux", options),
+        : Node("unitree_interface", options),
           sdk_wrapper_(shared_from_this(), "eth0", get_logger()),
           current_mode_(std::monostate{}) {
         sdk_wrapper_.initialize();
@@ -13,4 +13,4 @@ namespace unitree_interface {
         current_mode_ = Transition<std::monostate, IdleMode>::execute(sdk_wrapper_);
     }   
 
-} // namespace joint_cmd_mux
+} // namespace unitree_interface

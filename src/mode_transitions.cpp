@@ -83,4 +83,4 @@ namespace unitree_interface {
         return emergency_stop_mode;
     }
 
-}
+} // namespace unitree_interface

@@ -55,4 +55,4 @@ namespace unitree_interface {
         );
     }
 
-} // namespace joint_cmd_mux
+} // namespace unitree_interface

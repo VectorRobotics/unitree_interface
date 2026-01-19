@@ -1,5 +1,5 @@
-#ifndef VECTOR_CONTROL_TRANSITION_HPP
-#define VECTOR_CONTROL_TRANSITION_HPP
+#ifndef VECTOR_MODE_TRANSITIONS_HPP
+#define VECTOR_MODE_TRANSITIONS_HPP
 
 #include "unitree_interface/control_modes.hpp"
 
@@ -96,6 +96,6 @@ namespace unitree_interface {
         static ControlMode execute(UnitreeSDKWrapper& sdk_wrapper);
     };
 
-}
+} // namespace unitree_interface
 
-#endif
+#endif // VECTOR_MODE_TRANSITIONS_HPP

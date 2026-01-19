@@ -1,5 +1,5 @@
-#ifndef VECTOR_UNITREE_INTERFACE_HPP
-#define VECTOR_UNITREE_INTERFACE_HPP
+#ifndef VECTOR_UNITREE_SDK_WRAPPER_HPP
+#define VECTOR_UNITREE_SDK_WRAPPER_HPP
 
 #include <rclcpp/node.hpp>
 #include <rclcpp/logging.hpp>
@@ -103,6 +103,6 @@ namespace unitree_interface {
         LocoClientPtr loco_client_;
     };
 
-} // namespace joint_cmd_mux
+} // namespace unitree_interface
 
-#endif // VECTOR_UNITREE_INTERFACE_HPP
+#endif // VECTOR_UNITREE_SDK_WRAPPER_HPP

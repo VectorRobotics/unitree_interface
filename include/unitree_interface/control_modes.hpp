@@ -72,6 +72,6 @@ namespace unitree_interface {
         UnitreeSDKWrapper& unitree_interface
     );
 
-} // namespace joint_cmd_mux
+} // namespace unitree_interface
 
-#endif
+#endif // VECTOR_CONTROL_MODES_HPP

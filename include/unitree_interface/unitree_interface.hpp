@@ -1,5 +1,5 @@
-#ifndef VECTOR_JOINT_CMD_MUX_HPP
-#define VECTOR_JOINT_CMD_MUX_HPP
+#ifndef VECTOR_UNITREE_INTERFACE_HPP
+#define VECTOR_UNITREE_INTERFACE_HPP
 
 #include "unitree_interface/control_modes.hpp"
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
@@ -22,6 +22,6 @@ namespace unitree_interface {
         ControlMode current_mode_;
     };
 
-} // namespace joint_cmd_mux
+} // namespace unitree_interface
 
-#endif
+#endif // VECTOR_UNITREE_INTERFACE_HPP

@@ -1,5 +1,5 @@
-#ifndef VECTOR_JOINT_CMD_MUX_PCH_HPP
-#define VECTOR_JOINT_CMD_MUX_PCH_HPP
+#ifndef VECTOR_UNITREE_INTERFACE_PCH_HPP
+#define VECTOR_UNITREE_INTERFACE_PCH_HPP
 
 // Standard library headers
 #include <variant>
@@ -9,4 +9,4 @@
 // ROS 2 core header
 #include <rclcpp/rclcpp.hpp>
 
-#endif
+#endif // VECTOR_UNITREE_INTERFACE_PCH_HPP

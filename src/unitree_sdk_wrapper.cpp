@@ -216,4 +216,4 @@ namespace unitree_interface {
         return success;
     }
 
-} // namespace joint_cmd_mux
+} // namespace unitree_interface
