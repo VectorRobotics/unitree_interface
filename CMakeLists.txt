@@ -18,18 +18,21 @@ find_package(rosidl_default_generators REQUIRED)
 add_subdirectory(third_party/unitree_sdk2)
 
 # Generate interface definitions
-# set(msg_files
-#   ""
-# )
+set(msg_files
+  "interfaces/msg/JointCommand.msg"
+  "interfaces/msg/JointCommands.msg"
+)
 
 set(srv_files
   "interfaces/srv/ChangeControlMode.srv"
 )
 
 rosidl_generate_interfaces(unitree_interface
+  ${msg_files}
   ${srv_files}
   DEPENDENCIES
     builtin_interfaces
+    std_msgs
 )
 
 ament_export_dependencies(rosidl_default_runtime)
