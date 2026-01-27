@@ -5,8 +5,16 @@
 
 namespace unitree_interface {
 
-    // TODO: Figure out if transitions need to be idempotent
-    // TODO: Figure out error handling on state transitions
+    /*
+    Transitions to EmergencyMode are not idempotent. Re-invoking the transition will trigger
+    an attempt to enter damping mode each time. Although, logically speaking, it is not possible to
+    re-enter EmeregencyMode since we cannot transition away from it.
+
+    Other transitions are idempotent only if the sdk calls themselves are idempotent.
+
+    Currently, all transitions must return either the mode we're starting from, or the mode
+    we expect to end up in. In case of errors, if required, we must peform a rollback.
+    */
 
     // ========== std::monostate ==========
     ControlMode Transition<std::monostate, IdleMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
@@ -52,8 +60,8 @@ namespace unitree_interface {
         /*
         Our modes don't truly reflect unitree's internal controller state. We can land up in
         a situation wherein we transition from LowLevelMode to IdleMode and attempt to transition
-        to EmergencyMode. No longer knowing whether the hardware itself is in high-level or
-        low-level mode, if we erroneously attempt to enter damping mode without high-level
+        to EmergencyMode. No longer knowing whether the internal controller itself is in "high-level"
+        or "low-level" mode, if we erroneously attempt to enter damping mode without high-level
         control services active, we'll land up in some real shit.
         */
 
@@ -122,9 +130,25 @@ namespace unitree_interface {
 
         auto emergency_mode = sdk_wrapper.create_emergency_mode();
 
-        if (!emergency_mode.damp(sdk_wrapper)) {
-            return sdk_wrapper.create_low_level_mode();
+        if (emergency_mode.damp(sdk_wrapper)) {
+            return emergency_mode;
         }
+
+        // The internal controller should be high-level at this point, so we need to rollback to low-level
+        auto possible_low_level_mode = Transition<HighLevelMode, LowLevelMode>::execute(sdk_wrapper);
+
+        if (std::holds_alternative<LowLevelMode>(possible_low_level_mode)) {
+            return possible_low_level_mode;
+        }
+
+        // damp() failed, and we also failed to transition back to low-level
+        RCLCPP_ERROR(
+            sdk_wrapper.get_logger(),
+            "Call to damp failed during %s to %s transition. "
+            "The system will be left in emergency mode. Repeated calls to damp(estop) may be required",
+            ControlModeTraits<LowLevelMode>::name(),
+            ControlModeTraits<EmergencyMode>::name()
+        );
 
         return emergency_mode;
     }
