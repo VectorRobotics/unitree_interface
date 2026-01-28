@@ -135,7 +135,9 @@ namespace unitree_interface {
             return {};
         }
 
-        std::string form, name;
+        std::string form;
+        std::string name;
+
         const std::int32_t ret = msc_->CheckMode(form, name);
 
         if (ret != 0) {
@@ -163,7 +165,9 @@ namespace unitree_interface {
             return false;
         }
 
-        std::string form, name;
+        std::string form;
+        std::string name;
+
         msc_->CheckMode(form, name);
 
         if (name.empty()) {
