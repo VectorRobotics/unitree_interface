@@ -16,11 +16,12 @@ Currently, we attempt to enter HighLevelMode each time we transition from either
 - From FieldAI notes: "Avoid Command Conflicts: When programming via the SDK, always ensure the robot is in Development Mode (Step 9) to avoid the internal motion control program interfering with your custom commands." The interface internally contains a state machine and command gate/multiplexer to safeguard against exactly this problem.
 - **Damping mode is not available in development/debug/low-level mode**. We must transition to high-level mode (if we're not in it already) before activating damping or risk damage to the G1.
 - High-level services are made active upon boot. For us, this means we're implicitly in HighLevelMode.
-- MotionSwitcherClient::ReleaseMode() will turn off the ai_sport service and the G1 will enter debug mode.
+- MotionSwitcherClient::ReleaseMode() will turn off the ai_sport service and the G1 will enter debug mode. When this happens, the G1 will also lose control (i.e. go limp).
 - MotionSwitcherclient::SelectMode("ai") will turn on the ai_sport service and bring the high-level services back online.
-- Upon re-enabling the ai_sport service, the G1 will enter zero torque mode (similar to what happens when the G1 boots up).
+- Upon re-enabling the ai_sport service, the G1 will enter zero torque mode (similar to what happens when the G1 boots up) and go limp.
 
 ## TODO:
+- Get to a safe "mode" before transitioning High -> Low and vice-versa
 - Add hybrid / arm-action mode
 - Add more descriptive logging messages
 - Const-correctness?
