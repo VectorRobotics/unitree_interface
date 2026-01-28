@@ -9,7 +9,7 @@ namespace unitree_interface {
     /*
     Transitions to EmergencyMode are not idempotent. Re-invoking the transition will trigger
     an attempt to enter damping mode each time. Although, logically speaking, it is not possible to
-    re-enter EmeregencyMode since we cannot transition away from it.
+    re-enter EmergencyMode since we cannot transition away from it.
 
     Other transitions are idempotent only if the sdk calls themselves are idempotent.
 
@@ -45,8 +45,6 @@ namespace unitree_interface {
 
     // ========== IdleMode ==========
     ControlMode Transition<IdleMode, HighLevelMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
-        // TODO: Check if the mode string here is appropriate for the version of the Motion
-        // Control Service we're running with
         if (sdk_wrapper.has_active_mode() || sdk_wrapper.select_mode("ai")) {
             return HighLevelMode{};
         }
@@ -122,8 +120,6 @@ namespace unitree_interface {
     }
 
     ControlMode Transition<LowLevelMode, HighLevelMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
-        // TODO: Check if the mode string here is appropriate for the version of the Motion
-        // Control Service we're running with
         if (sdk_wrapper.has_active_mode() || sdk_wrapper.select_mode("ai")) {
             return HighLevelMode{};
         }
