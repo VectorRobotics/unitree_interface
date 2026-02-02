@@ -21,9 +21,15 @@ Currently, we attempt to enter HighLevelMode each time we transition from either
 - MotionSwitcherClient::ReleaseMode() will turn off the ai_sport service and the G1 will enter debug mode. When this happens, the G1 will also lose control (i.e. go limp).
 - MotionSwitcherclient::SelectMode("ai") will turn on the ai_sport service and bring the high-level services back online.
 - Upon re-enabling the ai_sport service, the G1 will enter zero torque mode (similar to what happens when the G1 boots up) and go limp.
+- Call to LocoClient::Stand() isn't very reliable. Can fail (the G1 will not stand) even if the return code is 0. May require a call to Damp() before.
+- Calls to SetBalanceMode() only take effect once the G1 "starts" (call to Start() returns 0). SetBalanceMode(0) will make it stand still until a velocity command is given. SetBalanceMode(1) will cause it to march in place.
+- ZeroTorque() also seems to only work after a call to Damp().
+- The G1 oscillates while marching/walking in "regular" (low speed) mode. This behavior doesn't occur in the "running" (higher speed) mode.
+- There is a lock around the waste of the G1 that constricts some of the DoF. Removing it may help with oscillation issue.
 
 ## TODO
 
+- Test if adding a delay after initialize() makes the call to Stand() more reliable.
 - Add hybrid / arm-action mode
 - Get to a safe "mode" before transitioning High -> Low and vice-versa [Maybe not needed]
 - Add more descriptive logging messages
