@@ -15,6 +15,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(unitree_interface_msgs REQUIRED)
 
 # unitree_sdk2
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # Don't build unitree_sdk2 examples
 add_subdirectory(third_party/unitree_sdk2)
 
 # Create the library
