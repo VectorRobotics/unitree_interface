@@ -3,9 +3,9 @@
 
 #include "unitree_interface/control_modes.hpp"
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
-#include "unitree_interface/srv/change_control_mode.hpp"
-#include "unitree_interface/msg/control_mode.hpp"
-#include "unitree_interface/msg/joint_commands.hpp"
+#include "unitree_interface_msgs/srv/change_control_mode.hpp"
+#include "unitree_interface_msgs/msg/control_mode.hpp"
+#include "unitree_interface_msgs/msg/joint_commands.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -39,15 +39,15 @@ namespace unitree_interface {
 
         // ========== Callbacks ==========
         void handle_mode_change_request(
-            srv::ChangeControlMode::Request::SharedPtr request,
-            srv::ChangeControlMode::Response::SharedPtr response
+            unitree_interface_msgs::srv::ChangeControlMode::Request::SharedPtr request,
+            unitree_interface_msgs::srv::ChangeControlMode::Response::SharedPtr response
         );
 
         void cmd_vel_callback(geometry_msgs::msg::Twist::SharedPtr message);
 
         // TODO: Add hybrid mode callbacks
 
-        void joint_commands_callback(msg::JointCommands::SharedPtr message);
+        void joint_commands_callback(unitree_interface_msgs::msg::JointCommands::SharedPtr message);
 
         void estop_callback();
 
@@ -69,14 +69,14 @@ namespace unitree_interface {
 
         std::uint8_t volume_;
 
-        rclcpp::Service<srv::ChangeControlMode>::SharedPtr mode_change_service_;
+        rclcpp::Service<unitree_interface_msgs::srv::ChangeControlMode>::SharedPtr mode_change_service_;
 
-        rclcpp::Publisher<msg::ControlMode>::SharedPtr current_mode_pub_;
+        rclcpp::Publisher<unitree_interface_msgs::msg::ControlMode>::SharedPtr current_mode_pub_;
 
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
         rclcpp::Subscription<std_msgs::msg::String>::SharedPtr tts_sub_;
         // TODO: Add hybrid mode subscriptions
-        rclcpp::Subscription<msg::JointCommands>::SharedPtr joint_commands_sub_;
+        rclcpp::Subscription<unitree_interface_msgs::msg::JointCommands>::SharedPtr joint_commands_sub_;
         rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr estop_sub_;
     };
 

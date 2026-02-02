@@ -2,7 +2,7 @@
 
 #include "unitree_interface/control_modes.hpp"
 #include "unitree_interface/mode_transitions.hpp"
-#include "unitree_interface/msg/control_mode.hpp"
+#include "unitree_interface_msgs/msg/control_mode.hpp"
 
 namespace ui = unitree_interface;
 
@@ -140,7 +140,7 @@ TEST_F(TryTransitionToTest, MonostateIDReturnsFailure) {
     // Transitioning to monostate is never valid
     auto [new_mode, success] = ui::try_transition_to(
         from,
-        ui::msg::ControlMode::CONTROL_MODE_MONOSTATE,
+        unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_MONOSTATE,
         wrapper
     );
 
@@ -155,7 +155,7 @@ TEST_F(TryTransitionToTest, EmergencyIDNotInSwitchReturnsFailure) {
     // Emergency is not in the switch (intentionally - use estop)
     auto [new_mode, success] = ui::try_transition_to(
         from,
-        ui::msg::ControlMode::CONTROL_MODE_EMERGENCY,
+        unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_EMERGENCY,
         wrapper
     );
 

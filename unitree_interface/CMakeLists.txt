@@ -12,34 +12,10 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
+find_package(unitree_interface_msgs REQUIRED)
 
 # unitree_sdk2
 add_subdirectory(third_party/unitree_sdk2)
-
-# Generate interface definitions
-set(msg_files
-  "interfaces/msg/ControlMode.msg"
-  "interfaces/msg/JointCommand.msg"
-  "interfaces/msg/JointCommands.msg"
-)
-
-set(srv_files
-  "interfaces/srv/ChangeControlMode.srv"
-)
-
-rosidl_generate_interfaces(unitree_interface
-  ${msg_files}
-  ${srv_files}
-  DEPENDENCIES
-    builtin_interfaces
-    std_msgs
-)
-
-ament_export_dependencies(rosidl_default_runtime)
-
-rosidl_get_typesupport_target(typesupport_target
-  unitree_interface rosidl_typesupport_cpp)
 
 # Create the library
 add_library(unitree_interface_lib
@@ -62,13 +38,13 @@ target_include_directories(unitree_interface_lib
 # )
 
 target_link_libraries(unitree_interface_lib
-  "${typesupport_target}"
   unitree_sdk2
 )
 
 ament_target_dependencies(unitree_interface_lib
   rclcpp
   geometry_msgs
+  unitree_interface_msgs
 )
 
 # Create the executable

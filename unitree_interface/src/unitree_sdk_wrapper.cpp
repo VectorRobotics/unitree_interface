@@ -2,7 +2,7 @@
 
 #include "unitree_interface/control_modes.hpp"
 #include "unitree_interface/mode_transitions.hpp"
-#include "unitree_interface/msg/joint_commands.hpp"
+#include "unitree_interface_msgs/msg/joint_commands.hpp"
 
 #include <unitree/robot/channel/channel_factory.hpp>
 #include <unitree/robot/channel/channel_publisher.hpp>
@@ -251,7 +251,7 @@ namespace unitree_interface {
     }
 
     // ========== Low-level capabilities ==========
-    void UnitreeSDKWrapper::send_joint_commands(const msg::JointCommands& message) {
+    void UnitreeSDKWrapper::send_joint_commands(const unitree_interface_msgs::msg::JointCommands& message) {
         if (!initialized_ || !low_cmd_pub_) {
             RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
             return;

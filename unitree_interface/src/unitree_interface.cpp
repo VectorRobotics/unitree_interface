@@ -26,7 +26,7 @@ namespace unitree_interface {
 
         declare_parameter("mode_change_service_name", "~/change_mode");
         declare_parameter("current_mode_topic", "~/current_mode");
-        declare_parameter("cmd_vel_topic", "~/cmd_vel");
+        declare_parameter("cmd_vel_topic", "/cmd_vel");
         declare_parameter("tts_topic", "~/tts");
         declare_parameter("joint_commands_topic", "~/joint_commands");
         declare_parameter("estop_topic", "/estop"); // TODO: namespace this?
@@ -94,11 +94,11 @@ namespace unitree_interface {
     }
 
     void UnitreeInterface::initialize_services() {
-        mode_change_service_ = create_service<srv::ChangeControlMode>(
+        mode_change_service_ = create_service<unitree_interface_msgs::srv::ChangeControlMode>(
             mode_change_service_name_,
             [this](
-                const srv::ChangeControlMode::Request::SharedPtr request, // NOLINT
-                srv::ChangeControlMode::Response::SharedPtr response
+                const unitree_interface_msgs::srv::ChangeControlMode::Request::SharedPtr request, // NOLINT
+                unitree_interface_msgs::srv::ChangeControlMode::Response::SharedPtr response
             ) {
                 handle_mode_change_request(request, response); // NOLINT
             }
@@ -111,7 +111,7 @@ namespace unitree_interface {
                         .transient_local()
                         .reliable();
 
-        current_mode_pub_ = create_publisher<msg::ControlMode>(
+        current_mode_pub_ = create_publisher<unitree_interface_msgs::msg::ControlMode>(
             current_mode_topic_,
             qos
         );
@@ -175,10 +175,10 @@ namespace unitree_interface {
                 // TODO: Add this when hybrid mode is ready
                 // } else if constexpr (std::is_same_v<ModeType, HybridMode>) {
                 } else if constexpr (std::is_same_v<ModeType, LowLevelMode>) {
-                    joint_commands_sub_ = create_subscription<msg::JointCommands>(
+                    joint_commands_sub_ = create_subscription<unitree_interface_msgs::msg::JointCommands>(
                         joint_commands_topic_,
                         rclcpp::QoS(10), // NOLINT
-                        [this](const msg::JointCommands::SharedPtr message) { // NOLINT
+                        [this](const unitree_interface_msgs::msg::JointCommands::SharedPtr message) { // NOLINT
                             joint_commands_callback(message);
                         }
                     );
@@ -192,8 +192,8 @@ namespace unitree_interface {
 
     // ========== Callbacks ==========
     void UnitreeInterface::handle_mode_change_request(
-        const srv::ChangeControlMode::Request::SharedPtr request, // NOLINT
-        srv::ChangeControlMode::Response::SharedPtr response // NOLINT
+        const unitree_interface_msgs::srv::ChangeControlMode::Request::SharedPtr request, // NOLINT
+        unitree_interface_msgs::srv::ChangeControlMode::Response::SharedPtr response // NOLINT
     ) {
         const std::uint8_t requested_mode = request->requested_mode;
 
@@ -237,7 +237,7 @@ namespace unitree_interface {
 
     // TODO: Add hybrid mode callbacks
 
-    void UnitreeInterface::joint_commands_callback(const msg::JointCommands::SharedPtr message) { // NOLINT
+    void UnitreeInterface::joint_commands_callback(const unitree_interface_msgs::msg::JointCommands::SharedPtr message) { // NOLINT
         if (std::holds_alternative<LowLevelMode>(current_mode_)) {
             // TODO: Check if joint indices are repeated
             // TODO: Check if joint indices are invalid
@@ -268,7 +268,7 @@ namespace unitree_interface {
 
     // ========== Publish methods ==========
     void UnitreeInterface::publish_current_mode() {
-        msg::ControlMode message;
+        unitree_interface_msgs::msg::ControlMode message;
 
         message.current_mode = std::visit(
             [](const auto& mode) {

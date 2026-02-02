@@ -1,39 +1,39 @@
 #include <gtest/gtest.h>
 
 #include "unitree_interface/control_modes.hpp"
-#include "unitree_interface/msg/control_mode.hpp"
+#include "unitree_interface_msgs/msg/control_mode.hpp"
 
 namespace ui = unitree_interface;
 
 TEST(ControlModeTraitsTest, IdsMatchMessageConstants) {
     EXPECT_EQ(
         ui::ControlModeTraits<std::monostate>::id,
-        ui::msg::ControlMode::CONTROL_MODE_MONOSTATE
+        unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_MONOSTATE
     );
 
     EXPECT_EQ(
         ui::ControlModeTraits<ui::IdleMode>::id,
-        ui::msg::ControlMode::CONTROL_MODE_IDLE
+        unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_IDLE
     );
 
     EXPECT_EQ(
         ui::ControlModeTraits<ui::HighLevelMode>::id,
-        ui::msg::ControlMode::CONTROL_MODE_HIGH_LEVEL
+        unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_HIGH_LEVEL
     );
 
     // TODO: Enable when HybridMode is ready
     // EXPECT_EQ(
     //     ui::ControlModeTraits<ui::HybridMode>::id,
-    //     ui::msg::ControlMode::CONTROL_MODE_HYBRID
+    //     unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_HYBRID
     // );
 
     EXPECT_EQ(
         ui::ControlModeTraits<ui::LowLevelMode>::id,
-        ui::msg::ControlMode::CONTROL_MODE_LOW_LEVEL
+        unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_LOW_LEVEL
     );
 
     EXPECT_EQ(
         ui::ControlModeTraits<ui::EmergencyMode>::id,
-        ui::msg::ControlMode::CONTROL_MODE_EMERGENCY
+        unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_EMERGENCY
     );
 }

@@ -1,7 +1,7 @@
 #ifndef VECTOR_UNITREE_SDK_WRAPPER_HPP
 #define VECTOR_UNITREE_SDK_WRAPPER_HPP
 
-#include "unitree_interface/msg/joint_commands.hpp"
+#include "unitree_interface_msgs/msg/joint_commands.hpp"
 
 #include <unitree/robot/channel/channel_publisher.hpp>
 #include <unitree/robot/channel/channel_subscriber.hpp>
@@ -88,7 +88,7 @@ namespace unitree_interface {
 
         // ========== Low-level capabilities ==========
         void send_joint_commands(
-            const msg::JointCommands& message
+            const unitree_interface_msgs::msg::JointCommands& message
         );
 
         // ========== Audio capabilities ==========
