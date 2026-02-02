@@ -8,11 +8,11 @@
 #include <unitree/idl/hg/LowCmd_.hpp>
 #include <unitree/idl/hg/LowState_.hpp>
 
-#include <rclcpp/node.hpp>
+#include <rclcpp/logger.hpp>
 
 #include <memory>
 #include <string>
-#include <array>
+#include <mutex>
 
 // ========== Forward declarations ==========
 namespace rclcpp {
@@ -70,7 +70,7 @@ namespace unitree_interface {
         bool has_active_mode() const;
 
         [[nodiscard]]
-        const LowState& get_low_state() const;
+        LowState get_low_state();
 
         // ========== General capabilities ==========
         bool release_mode();
@@ -85,6 +85,12 @@ namespace unitree_interface {
         );
 
         bool damp();
+
+        bool stand_up();
+
+        bool set_balance_mode(const std::uint8_t balance_mode);
+
+        bool start();
 
         // ========== Low-level capabilities ==========
         void send_joint_commands(

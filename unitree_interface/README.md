@@ -30,6 +30,7 @@ Currently, we attempt to enter HighLevelMode each time we transition from either
 ## TODO
 
 - Test if adding a delay after initialize() makes the call to Stand() more reliable.
+- Investigate why the ros domain needs to be different to use the interface.
 - Add hybrid / arm-action mode
 - Get to a safe "mode" before transitioning High -> Low and vice-versa [Maybe not needed]
 - Add more descriptive logging messages

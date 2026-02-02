@@ -1,7 +1,5 @@
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
 
-#include "unitree_interface/control_modes.hpp"
-#include "unitree_interface/mode_transitions.hpp"
 #include "unitree_interface_msgs/msg/joint_commands.hpp"
 
 #include <unitree/robot/channel/channel_factory.hpp>
@@ -154,7 +152,9 @@ namespace unitree_interface {
         return !name.empty();
     }
 
-    const LowState& UnitreeSDKWrapper::get_low_state() const {
+    LowState UnitreeSDKWrapper::get_low_state() {
+        std::lock_guard<std::mutex> lock(low_state_mutex_);
+
         return low_state_;
     }
 
@@ -250,6 +250,57 @@ namespace unitree_interface {
         return false;
     }
 
+    bool UnitreeSDKWrapper::stand_up() {
+        if (!initialized_ || !loco_client_) {
+            RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
+            return false;
+        }
+
+        const std::int32_t ret = loco_client_->StandUp();
+
+        if (ret == 0) {
+            RCLCPP_INFO(logger_, "Stand command succeeded");
+            return true;
+        }
+
+        RCLCPP_WARN(logger_, "Stand command failed with error code: %d", ret);
+        return false;
+    }
+
+    bool UnitreeSDKWrapper::set_balance_mode(const std::uint8_t balance_mode) {
+        if (!initialized_ || !loco_client_) {
+            RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
+            return false;
+        }
+
+        const std::int32_t ret = loco_client_->SetBalanceMode(static_cast<int>(balance_mode));
+
+        if (ret == 0) {
+            RCLCPP_INFO(logger_, "Set balance mode to %d", balance_mode);
+            return true;
+        }
+
+        RCLCPP_WARN(logger_, "Failed to set balance mode with error code: %d", ret);
+        return false;
+    }
+
+    bool UnitreeSDKWrapper::start() {
+        if (!initialized_ || !loco_client_) {
+            RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
+            return false;
+        }
+
+        const std::int32_t ret = loco_client_->Start();
+
+        if (ret == 0) {
+            RCLCPP_INFO(logger_, "Start command succeeded");
+            return true;
+        }
+
+        RCLCPP_WARN(logger_, "Start command failed with error code: %d", ret);
+        return false;
+    }
+
     // ========== Low-level capabilities ==========
     void UnitreeSDKWrapper::send_joint_commands(const unitree_interface_msgs::msg::JointCommands& message) {
         if (!initialized_ || !low_cmd_pub_) {
@@ -328,6 +379,8 @@ namespace unitree_interface {
 
     // ========== Callbacks ==========
     void UnitreeSDKWrapper::low_state_callback(const void* message) {
+        std::lock_guard<std::mutex> lock(low_state_mutex_);
+
         low_state_ = *static_cast<const LowState*>(message);
     }
 
