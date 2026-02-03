@@ -2,7 +2,9 @@
 
 #include "unitree_interface/control_modes.hpp"
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
-#include <variant>
+
+#include <chrono>
+#include <thread>
 
 namespace unitree_interface {
 
@@ -18,7 +20,38 @@ namespace unitree_interface {
     */
 
     // ========== std::monostate ==========
-    ControlMode Transition<std::monostate, IdleMode>::execute(UnitreeSDKWrapper& _) {
+    ControlMode Transition<std::monostate, IdleMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
+        if (!sdk_wrapper.damp()) {
+            RCLCPP_WARN(
+                sdk_wrapper.get_logger(),
+                "Call to damp failed during %s to %s transition",
+                ControlModeTraits<std::monostate>::name(),
+                ControlModeTraits<IdleMode>::name()
+            );
+        }
+
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+
+        if (!sdk_wrapper.stand_up()) {
+            RCLCPP_WARN(
+                sdk_wrapper.get_logger(),
+                "Call to stand_up failed during %s to %s transition",
+                ControlModeTraits<std::monostate>::name(),
+                ControlModeTraits<IdleMode>::name()
+            );
+        }
+
+        std::this_thread::sleep_for(std::chrono::seconds(10));
+
+        if (!sdk_wrapper.start()) {
+            RCLCPP_WARN(
+                sdk_wrapper.get_logger(),
+                "Call to start failed during %s to %s transition",
+                ControlModeTraits<std::monostate>::name(),
+                ControlModeTraits<IdleMode>::name()
+            );
+        }
+
         return IdleMode{};
     }
 
@@ -82,15 +115,13 @@ namespace unitree_interface {
 
         // At this point, we should have high-level services active
         if (!sdk_wrapper.damp()) {
-            return IdleMode{};
+            RCLCPP_ERROR(
+                sdk_wrapper.get_logger(),
+                "Call to damp failed during %s to Emergency transition. "
+                "The system will be left in emergency mode. Repeated calls to damp(estop) may be required",
+                ControlModeTraits<IdleMode>::name()
+            );
         }
-
-        RCLCPP_ERROR(
-            sdk_wrapper.get_logger(),
-            "Call to damp failed during %s to Emergency transition. "
-            "The system will be left in emergency mode. Repeated calls to damp(estop) may be required",
-            ControlModeTraits<IdleMode>::name()
-        );
 
         return EmergencyMode{};
     }
