@@ -28,7 +28,9 @@ namespace unitree_interface {
         declare_parameter("current_mode_topic", "~/current_mode");
         declare_parameter("cmd_vel_topic", "/cmd_vel");
         declare_parameter("tts_topic", "~/tts");
+#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         declare_parameter("joint_commands_topic", "~/joint_commands");
+#endif
         declare_parameter("estop_topic", "/estop"); // TODO: namespace this?
 
         // ========== Grab parameters ==========
@@ -36,7 +38,9 @@ namespace unitree_interface {
         current_mode_topic_ = get_parameter("current_mode_topic").as_string();
         cmd_vel_topic_ = get_parameter("cmd_vel_topic").as_string();
         tts_topic_ = get_parameter("tts_topic").as_string();
+#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         joint_commands_topic_ = get_parameter("joint_commands_topic").as_string();
+#endif
         estop_topic_ = get_parameter("estop_topic").as_string();
         volume_ = static_cast<std::uint8_t>(get_parameter("volume").as_int());
     }
@@ -141,7 +145,9 @@ namespace unitree_interface {
         // NOTE: Do not reset estop_sub_ if you value your life
         cmd_vel_sub_.reset();
         // TODO: Reset hybrid mode subscriptions
+#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         joint_commands_sub_.reset();
+#endif
 
         // Create subscriptions based on current mode
         std::visit(
@@ -172,8 +178,9 @@ namespace unitree_interface {
                         "%s: subscriptions created",
                         ControlModeTraits<HighLevelMode>::name()
                     );
-                // TODO: Add this when hybrid mode is ready
-                // } else if constexpr (std::is_same_v<ModeType, HybridMode>) {
+                // TODO: Add this when ArmActionMode is ready
+                // } else if constexpr (std::is_same_v<ModeType, ArmActionMode>) {
+#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
                 } else if constexpr (std::is_same_v<ModeType, LowLevelMode>) {
                     joint_commands_sub_ = create_subscription<unitree_interface_msgs::msg::JointCommands>(
                         joint_commands_topic_,
@@ -182,6 +189,7 @@ namespace unitree_interface {
                             joint_commands_callback(message);
                         }
                     );
+#endif
                 } else {
                     static_assert(always_false<ModeType>::value, "Illegal mode");
                 }
@@ -237,6 +245,7 @@ namespace unitree_interface {
 
     // TODO: Add hybrid mode callbacks
 
+#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     void UnitreeInterface::joint_commands_callback(const unitree_interface_msgs::msg::JointCommands::SharedPtr message) { // NOLINT
         if (std::holds_alternative<LowLevelMode>(current_mode_)) {
             // TODO: Check if joint indices are repeated
@@ -252,6 +261,7 @@ namespace unitree_interface {
             );
         }
     }
+#endif
 
     void UnitreeInterface::estop_callback() {
         auto [new_mode, _] = try_transition<EmergencyMode>(current_mode_, *sdk_wrapper_);

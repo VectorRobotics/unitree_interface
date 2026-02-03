@@ -27,10 +27,12 @@ TEST(ControlModeTraitsTest, IdsMatchMessageConstants) {
     //     unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_HYBRID
     // );
 
+#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     EXPECT_EQ(
         ui::ControlModeTraits<ui::LowLevelMode>::id,
         unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_LOW_LEVEL
     );
+#endif
 
     EXPECT_EQ(
         ui::ControlModeTraits<ui::EmergencyMode>::id,

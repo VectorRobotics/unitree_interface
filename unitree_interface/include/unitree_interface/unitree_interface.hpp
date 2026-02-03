@@ -5,7 +5,9 @@
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
 #include "unitree_interface_msgs/srv/change_control_mode.hpp"
 #include "unitree_interface_msgs/msg/control_mode.hpp"
+#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
 #include "unitree_interface_msgs/msg/joint_commands.hpp"
+#endif
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -47,7 +49,9 @@ namespace unitree_interface {
 
         // TODO: Add hybrid mode callbacks
 
+#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         void joint_commands_callback(unitree_interface_msgs::msg::JointCommands::SharedPtr message);
+#endif
 
         void estop_callback();
 
@@ -64,7 +68,9 @@ namespace unitree_interface {
         std::string current_mode_topic_;
         std::string cmd_vel_topic_;
         std::string tts_topic_;
+#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         std::string joint_commands_topic_;
+#endif
         std::string estop_topic_;
 
         std::uint8_t volume_;
@@ -75,8 +81,10 @@ namespace unitree_interface {
 
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
         rclcpp::Subscription<std_msgs::msg::String>::SharedPtr tts_sub_;
-        // TODO: Add hybrid mode subscriptions
+        // TODO: Add ArmActionMode subscriptions
+#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         rclcpp::Subscription<unitree_interface_msgs::msg::JointCommands>::SharedPtr joint_commands_sub_;
+#endif
         rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr estop_sub_;
     };
 

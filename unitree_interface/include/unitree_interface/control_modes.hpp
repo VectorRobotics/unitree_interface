@@ -2,50 +2,29 @@
 #define VECTOR_CONTROL_MODES_HPP
 
 #include "unitree_interface_msgs/msg/control_mode.hpp"
-#include "unitree_interface_msgs/msg/joint_commands.hpp"
 
 #include <cstdint>
-#include <string>
 #include <type_traits>
 #include <variant>
 
 namespace unitree_interface {
 
-    // ========== Control modes ==========
-    struct IdleMode {};
-
-    struct HighLevelMode {};
-
-    // TODO: Implement this
-    // struct HybridMode {}; // Rename to ArmActionMode?
-
-    // TODO: Disable this?
-    struct LowLevelMode {};
-
-    struct EmergencyMode {};
-
-    // ====================
-    // clang-format off
-    using ControlMode = std::variant<
-        std::monostate,
-        IdleMode,
-        HighLevelMode,
-        // HybridMode,
-        LowLevelMode,
-        EmergencyMode
-    >;
-    // clang-format on
-
-    // ========== Control mode traits ==========
     template <typename T>
     struct ControlModeTraits;
 
+    template <typename... Ts>
+    struct always_false : std::false_type {};
+
+    // ========== std::monostate ==========
     template <>
     struct ControlModeTraits<std::monostate> {
         static constexpr std::uint8_t id = unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_MONOSTATE;
 
         static constexpr const char* name() { return "std::monostate"; }
     };
+
+    // ========== IdleMode ==========
+    struct IdleMode {};
 
     template <>
     struct ControlModeTraits<IdleMode> {
@@ -54,6 +33,9 @@ namespace unitree_interface {
         static constexpr const char* name() { return "Idle"; }
     };
 
+    // ========== HighLevelMode ==========
+    struct HighLevelMode {};
+
     template <>
     struct ControlModeTraits<HighLevelMode> {
         static constexpr std::uint8_t id = unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_HIGH_LEVEL;
@@ -61,12 +43,19 @@ namespace unitree_interface {
         static constexpr const char* name() { return "HighLevel"; }
     };
 
-    // template <>
-    // struct ControlModeTraits<HybridMode> {
-    //     static constexpr std::uint8_t id = unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_HYBRID;
+    // ========== ArmActionMode ==========
+    // struct ArmActionMode {};
 
-    //     static constexpr const char* name() { return "Hybrid"; }
+    // template <>
+    // struct ControlModeTraits<ArmActionMode> {
+    //     static constexpr std::uint8_t id = unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_ARM_ACTION;
+
+    //     static constexpr const char* name() { return "ArmAction"; }
     // };
+
+#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
+    // ========== LowLevelMode ==========
+    struct LowLevelMode {};
 
     template <>
     struct ControlModeTraits<LowLevelMode> {
@@ -74,6 +63,10 @@ namespace unitree_interface {
 
         static constexpr const char* name() { return "LowLevel"; }
     };
+#endif
+
+    // ========== EmergencyMode ==========
+    struct EmergencyMode {};
 
     template <>
     struct ControlModeTraits<EmergencyMode> {
@@ -82,8 +75,18 @@ namespace unitree_interface {
         static constexpr const char* name() { return "Emergency"; }
     };
 
-    template <typename... Ts>
-    struct always_false : std::false_type {};
+    // clang-format off
+    using ControlMode = std::variant<
+        std::monostate,
+        IdleMode,
+        HighLevelMode,
+        // ArmActionMode,
+#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
+        LowLevelMode,
+#endif
+        EmergencyMode
+    >;
+    // clang-format on
 
 } // namespace unitree_interface
 
