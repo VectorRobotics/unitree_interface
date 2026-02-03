@@ -13,7 +13,6 @@
 
 #include <cstddef>
 #include <utility>
-#include <array>
 
 namespace unitree_interface {
 
