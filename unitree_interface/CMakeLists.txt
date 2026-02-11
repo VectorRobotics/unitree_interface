@@ -6,7 +6,7 @@ option(ENABLE_LOW_LEVEL_MODE "Enable LowLevelMode usage" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-# set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Release)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -52,7 +52,7 @@ ament_target_dependencies(unitree_interface_lib
 )
 
 target_compile_definitions(unitree_interface_lib
-  PRIVATE
+  PUBLIC
     $<$<BOOL:${ENABLE_LOW_LEVEL_MODE}>:UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE>
 )
 
