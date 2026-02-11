@@ -14,7 +14,7 @@ No commands are forwarded to the G1.
 
 ### HighLevelMode
 
-High-level commands (via the LocoClient) can be forwarded to the G1.
+High-level commands (via the LocoClient) can be forwarded to the G1. Control of the arms is possible via `rt/arm_sdk`.
 
 ### LowLevelMode
 

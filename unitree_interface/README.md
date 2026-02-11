@@ -7,9 +7,10 @@ The interface contains a state machine and command gate/multiplexer to prevent S
 
 ## TODO
 
-- Test if adding a delay after initialize() makes the call to Stand() more reliable.
+- Check if the G1 booted into development mode. If it did, transition to high-level before idle.
+- Add high <-> low delay after transition (?)
+- Add arm control capabilities
 - Investigate why the ros domain needs to be different to use the interface.
-- Add hybrid / arm-action mode
 - Get to a safe "mode" before transitioning High -> Low and vice-versa
 - Add more descriptive logging messages
 - Const-correctness?
