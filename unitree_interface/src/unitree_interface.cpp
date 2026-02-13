@@ -8,7 +8,9 @@
 #include <rclcpp/logging.hpp>
 #include <rclcpp/qos.hpp>
 
+#include <cstdint>
 #include <stdexcept>
+#include <tuple>
 #include <type_traits>
 #include <variant>
 
@@ -361,16 +363,22 @@ namespace unitree_interface {
 
     // ========== Publish methods ==========
     void UnitreeInterface::publish_current_mode() {
-        unitree_interface_msgs::msg::ControlMode message;
-
-        message.current_mode = std::visit(
+        auto [mode_id, mode_name] = std::visit(
             [](const auto& mode) {
                 using ModeType = std::decay_t<decltype(mode)>;
 
-                return ControlModeTraits<ModeType>::id;
+                return std::make_tuple(
+                    ControlModeTraits<ModeType>::id,
+                    ControlModeTraits<ModeType>::name()
+                );
             },
             current_mode_
         );
+
+        unitree_interface_msgs::msg::ControlMode message;
+        message.header.stamp = now();
+        message.current_mode_id = mode_id;
+        message.current_mode_name = mode_name;
 
         current_mode_pub_->publish(message);
     }
