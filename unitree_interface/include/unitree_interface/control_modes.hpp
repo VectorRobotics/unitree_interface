@@ -43,16 +43,6 @@ namespace unitree_interface {
         static constexpr const char* name() { return "HighLevel"; }
     };
 
-    // ========== ArmActionMode ==========
-    // struct ArmActionMode {};
-
-    // template <>
-    // struct ControlModeTraits<ArmActionMode> {
-    //     static constexpr std::uint8_t id = unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_ARM_ACTION;
-
-    //     static constexpr const char* name() { return "ArmAction"; }
-    // };
-
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     // ========== LowLevelMode ==========
     struct LowLevelMode {};
@@ -80,7 +70,6 @@ namespace unitree_interface {
         std::monostate,
         IdleMode,
         HighLevelMode,
-        // ArmActionMode,
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         LowLevelMode,
 #endif

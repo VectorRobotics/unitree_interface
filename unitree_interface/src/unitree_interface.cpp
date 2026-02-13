@@ -3,6 +3,7 @@
 #include "unitree_interface/control_modes.hpp"
 #include "unitree_interface/mode_transitions.hpp"
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
+#include "unitree_interface/topology.hpp"
 
 #include <rclcpp/logging.hpp>
 #include <rclcpp/qos.hpp>
@@ -26,20 +27,22 @@ namespace unitree_interface {
 
         declare_parameter("mode_change_service_name", "~/change_mode");
         declare_parameter("current_mode_topic", "~/current_mode");
-        declare_parameter("cmd_vel_topic", "/cmd_vel");
+        declare_parameter("cmd_vel_topic", "~/cmd_vel");
+        declare_parameter("cmd_arm_topic", "~/cmd_arm");
         declare_parameter("tts_topic", "~/tts");
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
-        declare_parameter("joint_commands_topic", "~/joint_commands");
+        declare_parameter("cmd_low_topic", "~/cmd_low");
 #endif
-        declare_parameter("estop_topic", "/estop"); // TODO: namespace this?
+        declare_parameter("estop_topic", "/estop");
 
         // ========== Grab parameters ==========
         mode_change_service_name_ = get_parameter("mode_change_service_name").as_string();
         current_mode_topic_ = get_parameter("current_mode_topic").as_string();
         cmd_vel_topic_ = get_parameter("cmd_vel_topic").as_string();
+        cmd_arm_topic_ = get_parameter("cmd_arm_topic").as_string();
         tts_topic_ = get_parameter("tts_topic").as_string();
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
-        joint_commands_topic_ = get_parameter("joint_commands_topic").as_string();
+        cmd_low_topic_ = get_parameter("cmd_low_topic").as_string();
 #endif
         estop_topic_ = get_parameter("estop_topic").as_string();
         volume_ = static_cast<std::uint8_t>(get_parameter("volume").as_int());
@@ -82,16 +85,16 @@ namespace unitree_interface {
 
         sdk_wrapper_->set_volume(volume_);
 
-        initialize_services();
-        initialize_publishers();
-        create_subscriptions();
-
         current_mode_ = Transition<std::monostate, IdleMode>::execute(*sdk_wrapper_);
         RCLCPP_INFO(
             logger_,
             "Initialized to %s",
             ControlModeTraits<IdleMode>::name()
         );
+
+        initialize_services();
+        initialize_publishers();
+        create_subscriptions();
 
         setup_mode_dependent_subscriptions();
         publish_current_mode();
@@ -144,9 +147,9 @@ namespace unitree_interface {
         // Reset all subscriptions
         // NOTE: Do not reset estop_sub_ if you value your life
         cmd_vel_sub_.reset();
-        // TODO: Reset hybrid mode subscriptions
+        cmd_arm_sub_.reset();
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
-        joint_commands_sub_.reset();
+        cmd_low_sub_.reset();
 #endif
 
         // Create subscriptions based on current mode
@@ -173,20 +176,26 @@ namespace unitree_interface {
                         }
                     );
 
+                    cmd_arm_sub_ = create_subscription<sensor_msgs::msg::JointState>(
+                        cmd_arm_topic_,
+                        rclcpp::QoS(10), // NOLINT
+                        [this](const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
+                            cmd_arm_callback(message);
+                        }
+                    );
+
                     RCLCPP_INFO(
                         logger_,
                         "%s: subscriptions created",
                         ControlModeTraits<HighLevelMode>::name()
                     );
-                // TODO: Add this when ArmActionMode is ready
-                // } else if constexpr (std::is_same_v<ModeType, ArmActionMode>) {
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
                 } else if constexpr (std::is_same_v<ModeType, LowLevelMode>) {
-                    joint_commands_sub_ = create_subscription<unitree_interface_msgs::msg::JointCommands>(
-                        joint_commands_topic_,
+                    cmd_low_sub_ = create_subscription<sensor_msgs::msg::JointState>(
+                        cmd_low_topic_,
                         rclcpp::QoS(10), // NOLINT
-                        [this](const unitree_interface_msgs::msg::JointCommands::SharedPtr message) { // NOLINT
-                            joint_commands_callback(message);
+                        [this](const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
+                            cmd_low_callback(message);
                         }
                     );
 #endif
@@ -215,14 +224,16 @@ namespace unitree_interface {
 
         current_mode_ = new_mode;
 
-        setup_mode_dependent_subscriptions();
-        publish_current_mode();
-
-        response->success = success;
-        response->message = success ? "Mode transition successful" : "Mode transition failed";
-
         if (success) {
             RCLCPP_INFO(logger_, "Mode transition successful");
+
+            setup_mode_dependent_subscriptions();
+            publish_current_mode();
+
+            response->success = success;
+            response->message = "Mode transition successful";
+        } else {
+            RCLCPP_INFO(logger_, "Mode transition failed");
         }
     }
 
@@ -243,21 +254,85 @@ namespace unitree_interface {
         }
     }
 
-    // TODO: Add hybrid mode callbacks
-
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
-    void UnitreeInterface::joint_commands_callback(const unitree_interface_msgs::msg::JointCommands::SharedPtr message) { // NOLINT
-        if (std::holds_alternative<LowLevelMode>(current_mode_)) {
-            // TODO: Check if joint indices are repeated
-            // TODO: Check if joint indices are invalid
+    void UnitreeInterface::cmd_arm_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
+        if (std::holds_alternative<HighLevelMode>(current_mode_)) {
             // TODO: Check command limits
-            sdk_wrapper_->send_joint_commands(*message);
+            if (
+                joints::all_in_group(message->name, joints::upper_body) &&
+                !joints::has_duplicates(message->name)
+            ) {
+                auto [indices, position, velocity, effort, kp, kd] =
+                    joints::resolve_joint_commands(
+                        message->name,
+                        message->position,
+                        message->velocity,
+                        message->effort
+                    );
+
+                sdk_wrapper_->send_arm_commands(
+                    indices,
+                    position,
+                    velocity,
+                    effort,
+                    kp,
+                    kd
+                );
+            } else {
+                RCLCPP_WARN_THROTTLE(
+                    logger_,
+                    *get_clock(),
+                    1000,
+                    "Invalid or duplicate joint names for cmd_arm"
+                );
+            }
         } else {
             RCLCPP_WARN_THROTTLE(
                 logger_,
                 *get_clock(),
                 1000,
-                "Received joint command but not in LowLevelMode"
+                "Received cmd_arm but not in HighLevelMode"
+            );
+        }
+    }
+
+#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
+    void UnitreeInterface::cmd_low_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
+        if (std::holds_alternative<LowLevelMode>(current_mode_)) {
+            // TODO: Check command limits
+            if (
+                joints::all_in_group(message->name, joints::all_joints) &&
+                !joints::has_duplicates(message->name)
+            ) {
+                auto [indices, position, velocity, effort, kp, kd] =
+                    joints::resolve_joint_commands(
+                        message->name,
+                        message->position,
+                        message->velocity,
+                        message->effort
+                    );
+
+                sdk_wrapper_->send_low_commands(
+                    indices,
+                    position,
+                    velocity,
+                    effort,
+                    kp,
+                    kd
+                );
+            } else {
+                RCLCPP_WARN_THROTTLE(
+                    logger_,
+                    *get_clock(),
+                    1000,
+                    "Invalid or duplicate joint names for cmd_low"
+                );
+            }
+        } else {
+            RCLCPP_WARN_THROTTLE(
+                logger_,
+                *get_clock(),
+                1000,
+                "Received cmd_low but not in LowLevelMode"
             );
         }
     }

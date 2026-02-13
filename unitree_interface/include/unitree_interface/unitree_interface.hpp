@@ -1,19 +1,18 @@
 #ifndef VECTOR_UNITREE_INTERFACE_HPP
 #define VECTOR_UNITREE_INTERFACE_HPP
 
+#include "sensor_msgs/msg/joint_state.hpp"
 #include "unitree_interface/control_modes.hpp"
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
 #include "unitree_interface_msgs/srv/change_control_mode.hpp"
 #include "unitree_interface_msgs/msg/control_mode.hpp"
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
-#include "unitree_interface_msgs/msg/joint_commands.hpp"
-#endif
 
 #include <rclcpp/rclcpp.hpp>
 
 #include <geometry_msgs/msg/twist.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/empty.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
 
 #include <memory>
 
@@ -47,10 +46,10 @@ namespace unitree_interface {
 
         void cmd_vel_callback(geometry_msgs::msg::Twist::SharedPtr message);
 
-        // TODO: Add hybrid mode callbacks
+        void cmd_arm_callback(sensor_msgs::msg::JointState::SharedPtr message);
 
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
-        void joint_commands_callback(unitree_interface_msgs::msg::JointCommands::SharedPtr message);
+        void cmd_low_callback(sensor_msgs::msg::JointState::SharedPtr message);
 #endif
 
         void estop_callback();
@@ -67,9 +66,10 @@ namespace unitree_interface {
         std::string mode_change_service_name_;
         std::string current_mode_topic_;
         std::string cmd_vel_topic_;
+        std::string cmd_arm_topic_;
         std::string tts_topic_;
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
-        std::string joint_commands_topic_;
+        std::string cmd_low_topic_;
 #endif
         std::string estop_topic_;
 
@@ -81,9 +81,9 @@ namespace unitree_interface {
 
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
         rclcpp::Subscription<std_msgs::msg::String>::SharedPtr tts_sub_;
-        // TODO: Add ArmActionMode subscriptions
+        rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr cmd_arm_sub_;
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
-        rclcpp::Subscription<unitree_interface_msgs::msg::JointCommands>::SharedPtr joint_commands_sub_;
+        rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr cmd_low_sub_;
 #endif
         rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr estop_sub_;
     };

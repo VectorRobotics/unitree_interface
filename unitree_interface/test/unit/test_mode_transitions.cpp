@@ -76,8 +76,6 @@ TEST(TransitionLegalityTest, FromHighLevel_ToEmergency_Allowed) {
     EXPECT_TRUE(ui::can_transition<ui::EmergencyMode>(ui::ControlMode{ui::HighLevelMode{}}));
 }
 
-// TODO: Add tests for hybrid mode once it's ready
-
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
 // ========== ui::LowLevelMode ==========
 TEST(TransitionLegalityTest, FromLowLevel_ToMonostate_NotAllowed) {

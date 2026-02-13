@@ -21,12 +21,6 @@ TEST(ControlModeTraitsTest, IdsMatchMessageConstants) {
         unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_HIGH_LEVEL
     );
 
-    // TODO: Enable when HybridMode is ready
-    // EXPECT_EQ(
-    //     ui::ControlModeTraits<ui::HybridMode>::id,
-    //     unitree_interface_msgs::msg::ControlMode::CONTROL_MODE_HYBRID
-    // );
-
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     EXPECT_EQ(
         ui::ControlModeTraits<ui::LowLevelMode>::id,

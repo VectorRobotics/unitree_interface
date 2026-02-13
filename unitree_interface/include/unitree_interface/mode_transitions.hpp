@@ -77,8 +77,6 @@ namespace unitree_interface {
         static ControlMode execute(UnitreeSDKWrapper& sdk_wrapper);
     };
 
-    // TODO: Add transitions for hybrid mode
-
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     // ========== LowLevelMode ==========
     template <>

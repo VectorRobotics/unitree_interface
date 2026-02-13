@@ -1,6 +1,5 @@
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
-
-#include "unitree_interface_msgs/msg/joint_commands.hpp"
+#include "unitree_interface/topology.hpp"
 
 #include <unitree/robot/channel/channel_factory.hpp>
 #include <unitree/robot/channel/channel_publisher.hpp>
@@ -70,6 +69,7 @@ namespace unitree_interface {
                 loco_client_timeout,
                 audio_client_timeout
             );
+            initialize_arm_sdk_machinery();
             initialize_low_level_machinery();
 
             initialized_ = true;
@@ -107,6 +107,13 @@ namespace unitree_interface {
         audio_client_->SetTimeout(audio_client_timeout);
         audio_client_->Init();
         RCLCPP_INFO(logger_, "AudioClient initialized");
+    }
+
+    void UnitreeSDKWrapper::initialize_arm_sdk_machinery() {
+        // Initialize the arm-sdk command publisher
+        arm_sdk_pub_ = std::make_shared<unitree::robot::ChannelPublisher<LowCmd>>(arm_sdk_topic_);
+        arm_sdk_pub_->InitChannel();
+        RCLCPP_INFO(logger_, "Arm-SDK command publisher initialized");
     }
 
     void UnitreeSDKWrapper::initialize_low_level_machinery() {
@@ -301,27 +308,34 @@ namespace unitree_interface {
     }
 
     // ========== Low-level capabilities ==========
-    void UnitreeSDKWrapper::send_joint_commands(const unitree_interface_msgs::msg::JointCommands& message) {
-        if (!initialized_ || !low_cmd_pub_) {
-            RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
-            return;
-        }
-
+    LowCmd UnitreeSDKWrapper::construct_low_cmd(
+        const std::vector<std::uint8_t>& indices,
+        const std::vector<float>& position,
+        const std::vector<float>& velocity,
+        const std::vector<float>& effort,
+        const std::vector<float>& kp,
+        const std::vector<float>& kd,
+        const bool use_weight
+    ) {
         LowCmd command{};
 
         command.mode_pr() = mode_pr_;
         command.mode_machine() = mode_machine_;
 
-        // Fill in the commands
-        for (const auto& command_spec : message.commands) {
-            const auto joint_index = static_cast<size_t>(command_spec.joint_index);
+        if (use_weight) {
+            // No command blending - straight control
+            command.motor_cmd().at(static_cast<std::uint8_t>(joints::JointIndex::WeightParameter)).q() = 1;
+        }
 
-            command.motor_cmd().at(joint_index).mode() = command_spec.mode;
-            command.motor_cmd().at(joint_index).q()    = command_spec.q;
-            command.motor_cmd().at(joint_index).dq()   = command_spec.dq;
-            command.motor_cmd().at(joint_index).tau()  = command_spec.tau;
-            command.motor_cmd().at(joint_index).kp()   = command_spec.kp;
-            command.motor_cmd().at(joint_index).kd()   = command_spec.kd;
+        for (std::size_t i = 0; i < indices.size(); ++i) {
+            const auto joint_index = indices[i];
+
+            command.motor_cmd().at(joint_index).mode() = 1;
+            command.motor_cmd().at(joint_index).q()    = position[i];
+            command.motor_cmd().at(joint_index).dq()   = velocity[i];
+            command.motor_cmd().at(joint_index).tau()   = effort[i];
+            command.motor_cmd().at(joint_index).kp()   = kp[i];
+            command.motor_cmd().at(joint_index).kd()   = kd[i];
         }
 
         static_assert(sizeof(LowCmd) % 4 == 0);
@@ -331,6 +345,58 @@ namespace unitree_interface {
         command.crc() = crc_32_core(
             reinterpret_cast<const std::uint32_t*>(&command),
             (sizeof(LowCmd) / sizeof(std::uint32_t)) - 1
+        );
+
+        return command;
+    }
+
+    void UnitreeSDKWrapper::send_arm_commands(
+        const std::vector<std::uint8_t>& indices,
+        const std::vector<float>& position,
+        const std::vector<float>& velocity,
+        const std::vector<float>& effort,
+        const std::vector<float>& kp,
+        const std::vector<float>& kd
+    ) {
+        if (!initialized_ || !arm_sdk_pub_) {
+            RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
+            return;
+        }
+
+        auto command = construct_low_cmd(
+            indices,
+            position,
+            velocity,
+            effort,
+            kp,
+            kd,
+            true
+        );
+
+        arm_sdk_pub_->Write(command);
+    }
+
+    void UnitreeSDKWrapper::send_low_commands(
+        const std::vector<std::uint8_t>& indices,
+        const std::vector<float>& position,
+        const std::vector<float>& velocity,
+        const std::vector<float>& effort,
+        const std::vector<float>& kp,
+        const std::vector<float>& kd
+    ) {
+        if (!initialized_ || !low_cmd_pub_) {
+            RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
+            return;
+        }
+
+        auto command = construct_low_cmd(
+            indices,
+            position,
+            velocity,
+            effort,
+            kp,
+            kd,
+            false
         );
 
         low_cmd_pub_->Write(command);

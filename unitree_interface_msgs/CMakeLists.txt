@@ -12,8 +12,6 @@ find_package(std_msgs REQUIRED)
 
 set(msg_files
   "msg/ControlMode.msg"
-  "msg/JointCommand.msg"
-  "msg/JointCommands.msg"
 )
 
 set(srv_files

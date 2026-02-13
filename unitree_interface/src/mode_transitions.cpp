@@ -21,6 +21,7 @@ namespace unitree_interface {
 
     // ========== std::monostate ==========
     ControlMode Transition<std::monostate, IdleMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
+        // TODO: Optimize this. Add early returns
         if (!sdk_wrapper.damp()) {
             RCLCPP_WARN(
                 sdk_wrapper.get_logger(),
@@ -156,6 +157,7 @@ namespace unitree_interface {
     }
 
     ControlMode Transition<LowLevelMode, HighLevelMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
+        // TODO: Add "boot" sequence (damp() -> stand_up() -> start())
         if (sdk_wrapper.has_active_mode() || sdk_wrapper.select_mode("ai")) {
             return HighLevelMode{};
         }
@@ -206,10 +208,6 @@ namespace unitree_interface {
             case ControlModeTraits<HighLevelMode>::id:
                 return try_transition<HighLevelMode>(from, sdk_wrapper);
                 break;
-            // TODO: Enable this when HybridMode is ready
-            // case ControlModeTraits<HybridMode>::id:
-            //     return try_transition<HybridMode>(from, sdk_wrapper);
-            //     break;
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
             case ControlModeTraits<LowLevelMode>::id:
                 return try_transition<LowLevelMode>(from, sdk_wrapper);

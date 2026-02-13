@@ -1,8 +1,6 @@
 #ifndef VECTOR_UNITREE_SDK_WRAPPER_HPP
 #define VECTOR_UNITREE_SDK_WRAPPER_HPP
 
-#include "unitree_interface_msgs/msg/joint_commands.hpp"
-
 #include <unitree/robot/channel/channel_publisher.hpp>
 #include <unitree/robot/channel/channel_subscriber.hpp>
 #include <unitree/idl/hg/LowCmd_.hpp>
@@ -13,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <mutex>
+#include <vector>
 
 // ========== Forward declarations ==========
 namespace rclcpp {
@@ -92,9 +91,23 @@ namespace unitree_interface {
 
         bool start();
 
+        void send_arm_commands(
+            const std::vector<std::uint8_t>& indices,
+            const std::vector<float>& position,
+            const std::vector<float>& velocity,
+            const std::vector<float>& effort,
+            const std::vector<float>& kp,
+            const std::vector<float>& kd
+        );
+
         // ========== Low-level capabilities ==========
-        void send_joint_commands(
-            const unitree_interface_msgs::msg::JointCommands& message
+        void send_low_commands(
+            const std::vector<std::uint8_t>& indices,
+            const std::vector<float>& position,
+            const std::vector<float>& velocity,
+            const std::vector<float>& effort,
+            const std::vector<float>& kp,
+            const std::vector<float>& kd
         );
 
         // ========== Audio capabilities ==========
@@ -109,7 +122,20 @@ namespace unitree_interface {
             float audio_client_timeout
         );
 
+        void initialize_arm_sdk_machinery();
+
         void initialize_low_level_machinery();
+
+        // ========== Low-level capabilities ==========
+        LowCmd construct_low_cmd(
+            const std::vector<std::uint8_t>& indices,
+            const std::vector<float>& position,
+            const std::vector<float>& velocity,
+            const std::vector<float>& effort,
+            const std::vector<float>& kp,
+            const std::vector<float>& kd,
+            bool use_weight
+        );
 
         // ========== Callbacks ==========
         void low_state_callback(const void* message);
@@ -125,7 +151,7 @@ namespace unitree_interface {
         std::unique_ptr<unitree::robot::g1::AudioClient> audio_client_;
 
         // ========== Low-level stuff ==========
-        // const std::string arm_cmd_topic_{"rt/arm_sdk"};
+        const std::string arm_sdk_topic_{"rt/arm_sdk"};
         const std::string low_cmd_topic_{"rt/lowcmd"};
         const std::string low_state_topic_{"rt/lowstate"};
         // const std::string torso_imu_topic_{"rt/secondary_imu"};
@@ -136,6 +162,7 @@ namespace unitree_interface {
         LowState low_state_;
         std::mutex low_state_mutex_;
 
+        unitree::robot::ChannelPublisherPtr<LowCmd> arm_sdk_pub_;
         unitree::robot::ChannelPublisherPtr<LowCmd> low_cmd_pub_;
         unitree::robot::ChannelSubscriberPtr<LowState> low_state_sub_;
     };

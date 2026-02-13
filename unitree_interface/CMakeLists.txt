@@ -15,6 +15,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(unitree_interface_msgs REQUIRED)
 
 # unitree_sdk2
@@ -48,6 +49,7 @@ target_link_libraries(unitree_interface_lib
 ament_target_dependencies(unitree_interface_lib
   rclcpp
   geometry_msgs
+  sensor_msgs
   unitree_interface_msgs
 )
 
