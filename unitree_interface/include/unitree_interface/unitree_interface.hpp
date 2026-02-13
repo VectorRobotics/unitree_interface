@@ -67,6 +67,7 @@ namespace unitree_interface {
         std::string current_mode_topic_;
         std::string cmd_vel_topic_;
         std::string cmd_arm_topic_;
+        std::string joint_states_topic_;
         std::string tts_topic_;
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         std::string cmd_low_topic_;
@@ -78,6 +79,7 @@ namespace unitree_interface {
         rclcpp::Service<unitree_interface_msgs::srv::ChangeControlMode>::SharedPtr mode_change_service_;
 
         rclcpp::Publisher<unitree_interface_msgs::msg::ControlMode>::SharedPtr current_mode_pub_;
+        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_pub_;
 
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
         rclcpp::Subscription<std_msgs::msg::String>::SharedPtr tts_sub_;

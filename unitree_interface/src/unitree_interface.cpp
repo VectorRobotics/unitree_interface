@@ -29,6 +29,7 @@ namespace unitree_interface {
         declare_parameter("current_mode_topic", "~/current_mode");
         declare_parameter("cmd_vel_topic", "~/cmd_vel");
         declare_parameter("cmd_arm_topic", "~/cmd_arm");
+        declare_parameter("joint_states_topic", "~/joint_states");
         declare_parameter("tts_topic", "~/tts");
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         declare_parameter("cmd_low_topic", "~/cmd_low");
@@ -94,6 +95,7 @@ namespace unitree_interface {
 
         initialize_services();
         initialize_publishers();
+        sdk_wrapper_->set_joint_states_publisher(joint_states_pub_);
         create_subscriptions();
 
         setup_mode_dependent_subscriptions();
@@ -122,6 +124,12 @@ namespace unitree_interface {
             current_mode_topic_,
             qos
         );
+
+        joint_states_pub_ = create_publisher<sensor_msgs::msg::JointState>(
+            joint_states_topic_,
+            rclcpp::QoS(10) // NOLINT
+        );
+
         RCLCPP_INFO(logger_, "Publishers created");
     }
 

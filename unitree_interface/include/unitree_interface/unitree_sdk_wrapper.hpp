@@ -7,10 +7,11 @@
 #include <unitree/idl/hg/LowState_.hpp>
 
 #include <rclcpp/logger.hpp>
+#include <rclcpp/publisher.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
 
 #include <memory>
 #include <string>
-#include <mutex>
 #include <vector>
 
 // ========== Forward declarations ==========
@@ -68,8 +69,9 @@ namespace unitree_interface {
         [[nodiscard]]
         bool has_active_mode() const;
 
-        [[nodiscard]]
-        LowState get_low_state();
+        void set_joint_states_publisher(
+            rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr publisher
+        );
 
         // ========== General capabilities ==========
         bool release_mode();
@@ -159,12 +161,11 @@ namespace unitree_interface {
         const std::uint8_t mode_pr_{0}; // Always use PR mode (command joint angles)
         const std::uint8_t mode_machine_{2}; // 29 DoF Unitree G1
 
-        LowState low_state_;
-        std::mutex low_state_mutex_;
-
         unitree::robot::ChannelPublisherPtr<LowCmd> arm_sdk_pub_;
         unitree::robot::ChannelPublisherPtr<LowCmd> low_cmd_pub_;
         unitree::robot::ChannelSubscriberPtr<LowState> low_state_sub_;
+
+        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_pub_;
     };
 
 } // namespace unitree_interface

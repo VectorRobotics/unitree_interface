@@ -158,12 +158,6 @@ namespace unitree_interface {
         return !name.empty();
     }
 
-    LowState UnitreeSDKWrapper::get_low_state() {
-        std::lock_guard<std::mutex> lock(low_state_mutex_);
-
-        return low_state_;
-    }
-
     // ========== General capabilities ==========
     bool UnitreeSDKWrapper::release_mode() {
         if (!initialized_ || !msc_) {
@@ -442,11 +436,33 @@ namespace unitree_interface {
         return false;
     }
 
+    // ========== Joint state feedback ==========
+    void UnitreeSDKWrapper::set_joint_states_publisher(
+        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr publisher
+    ) {
+        joint_states_pub_ = std::move(publisher);
+    }
+
     // ========== Callbacks ==========
     void UnitreeSDKWrapper::low_state_callback(const void* message) {
-        std::lock_guard<std::mutex> lock(low_state_mutex_);
+        const auto& state = *static_cast<const LowState*>(message);
 
-        low_state_ = *static_cast<const LowState*>(message);
+        if (joint_states_pub_) {
+            sensor_msgs::msg::JointState joint_state;
+            joint_state.name.resize(joints::num_joints);
+            joint_state.position.resize(joints::num_joints);
+            joint_state.velocity.resize(joints::num_joints);
+            joint_state.effort.resize(joints::num_joints);
+
+            for (std::size_t i = 0; i < joints::num_joints; ++i) {
+                joint_state.name[i] = joints::joint_names[i];
+                joint_state.position[i] = state.motor_state()[i].q();
+                joint_state.velocity[i] = state.motor_state()[i].dq();
+                joint_state.effort[i] = state.motor_state()[i].tau_est();
+            }
+
+            joint_states_pub_->publish(joint_state);
+        }
     }
 
 } // namespace unitree_interface

@@ -3,7 +3,7 @@
 <package format="3">
   <name>unitree_interface</name>
   <version>0.0.0</version>
-  <description>A ROS 2 package that acts an in-between between the vector software stack and the G1</description>
+  <description>A ROS 2 package that acts as an in-between between the vector software stack and the G1</description>
   <maintainer email="karankha@andrew.cmu.edu">Karan Khanna</maintainer>
   <license>MIT</license>
 
@@ -11,6 +11,7 @@
 
   <depend>rclcpp</depend>
   <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
   <depend>unitree_interface_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>

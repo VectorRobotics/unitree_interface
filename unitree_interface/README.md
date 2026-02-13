@@ -9,12 +9,10 @@ The interface contains a state machine and command gate/multiplexer to prevent S
 
 - Check if the G1 booted into development mode. If it did, transition to high-level before idle.
 - Add high <-> low delay after transition (?)
-- Add arm control capabilities
 - Investigate why the ros domain needs to be different to use the interface.
 - Get to a safe "mode" before transitioning High -> Low and vice-versa
 - Add more descriptive logging messages
 - Const-correctness?
 - Thread-safety?
-- Republish low-state if it can't be read
 - Build optimizations
 - Send a TTS message when the battery is low (stretch)
