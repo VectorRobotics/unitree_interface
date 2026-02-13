@@ -8,7 +8,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'network_interface',
-            default_value='eth0',
+            default_value='enp86s0',
             description='Network interface for Unitree SDK communication'
         ),
         DeclareLaunchArgument(

@@ -149,6 +149,14 @@ namespace unitree_interface {
                     auto resultant_mode = Transition<FromType, ToType>::execute(sdk_wrapper);
                     bool success = std::holds_alternative<ToType>(resultant_mode);
 
+                    std::string mode_name{};
+                    if (success) {
+                        mode_name = ControlModeTraits<ToType>::name();
+                    } else {
+                        mode_name = ControlModeTraits<FromType>::name();
+                    }
+                    sdk_wrapper.send_speech_command(mode_name);
+
                     return {resultant_mode, success};
                 }
 
