@@ -43,6 +43,7 @@ namespace unitree_interface {
         current_mode_topic_ = get_parameter("current_mode_topic").as_string();
         cmd_vel_topic_ = get_parameter("cmd_vel_topic").as_string();
         cmd_arm_topic_ = get_parameter("cmd_arm_topic").as_string();
+        joint_states_topic_ = get_parameter("joint_states_topic").as_string();
         tts_topic_ = get_parameter("tts_topic").as_string();
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         cmd_low_topic_ = get_parameter("cmd_low_topic").as_string();
