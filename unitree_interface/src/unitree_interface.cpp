@@ -268,10 +268,7 @@ namespace unitree_interface {
     void UnitreeInterface::cmd_arm_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
             // TODO: Check command limits
-            if (
-                joints::all_in_group(message->name, joints::upper_body) &&
-                !joints::has_duplicates(message->name)
-            ) {
+            if (!joints::has_duplicates(message->name)) {
                 auto [indices, position, velocity, effort, kp, kd] =
                     joints::resolve_joint_commands(
                         message->name,
@@ -310,10 +307,7 @@ namespace unitree_interface {
     void UnitreeInterface::cmd_low_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
         if (std::holds_alternative<LowLevelMode>(current_mode_)) {
             // TODO: Check command limits
-            if (
-                joints::all_in_group(message->name, joints::all_joints) &&
-                !joints::has_duplicates(message->name)
-            ) {
+            if (!joints::has_duplicates(message->name)) {
                 auto [indices, position, velocity, effort, kp, kd] =
                     joints::resolve_joint_commands(
                         message->name,

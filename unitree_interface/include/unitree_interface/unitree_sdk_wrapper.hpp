@@ -159,7 +159,7 @@ namespace unitree_interface {
         // const std::string torso_imu_topic_{"rt/secondary_imu"};
 
         const std::uint8_t mode_pr_{0}; // Always use PR mode (command joint angles)
-        const std::uint8_t mode_machine_{2}; // 29 DoF Unitree G1
+        std::uint8_t mode_machine_{0};
 
         unitree::robot::ChannelPublisherPtr<LowCmd> arm_sdk_pub_;
         unitree::robot::ChannelPublisherPtr<LowCmd> low_cmd_pub_;

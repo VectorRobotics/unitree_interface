@@ -194,8 +194,8 @@ namespace unitree_interface::joints {
 
     constexpr float default_kp(Gearbox gearbox) {
         switch (gearbox) {
-            case Gearbox::Small: return 40.F;
-            case Gearbox::Medium: return 40.F;
+            case Gearbox::Small: return 10.F;
+            case Gearbox::Medium: return 10.F;
             case Gearbox::Large: return 100.F;
         }
         return 0.F;
@@ -203,9 +203,9 @@ namespace unitree_interface::joints {
 
     constexpr float default_kd(Gearbox gearbox) {
         switch (gearbox) {
-            case Gearbox::Small: return 1.F;
-            case Gearbox::Medium: return 1.F;
-            case Gearbox::Large: return 1.F;
+            case Gearbox::Small: return 2.F;
+            case Gearbox::Medium: return 2.F;
+            case Gearbox::Large: return 2.F;
         }
         return 0.F;
     }
@@ -336,9 +336,9 @@ namespace unitree_interface::joints {
 
             // Narrow doubles to floats
             indices.push_back(static_cast<std::uint8_t>(*index));
-            pos.push_back(static_cast<float>(position[i]));
-            vel.push_back(static_cast<float>(velocity[i]));
-            eff.push_back(static_cast<float>(effort[i]));
+            pos.push_back(i < position.size() ? static_cast<float>(position[i]) : 0.0f);
+            vel.push_back(i < velocity.size() ? static_cast<float>(velocity[i]) : 0.0f);
+            eff.push_back(i < effort.size()   ? static_cast<float>(effort[i])   : 0.0f);
             kp.push_back(default_kp(*index));
             kd.push_back(default_kd(*index));
         }

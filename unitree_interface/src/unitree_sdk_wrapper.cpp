@@ -447,6 +447,10 @@ namespace unitree_interface {
     void UnitreeSDKWrapper::low_state_callback(const void* message) {
         const auto& state = *static_cast<const LowState*>(message);
 
+        if (mode_machine_ != state.mode_machine()) {
+            mode_machine_ = state.mode_machine();
+        }
+
         if (joint_states_pub_) {
             sensor_msgs::msg::JointState joint_state;
             joint_state.name.resize(joints::num_joints);
