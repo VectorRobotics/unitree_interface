@@ -8,8 +8,10 @@
 #include <rclcpp/logging.hpp>
 #include <rclcpp/qos.hpp>
 
+#include <chrono>
 #include <cstdint>
 #include <stdexcept>
+#include <thread>
 #include <tuple>
 #include <type_traits>
 #include <variant>
@@ -28,6 +30,7 @@ namespace unitree_interface {
         declare_parameter("volume", 100); // NOLINT
 
         declare_parameter("mode_change_service_name", "~/change_mode");
+        declare_parameter("ready_locomotion_service_name", "~/ready_locomotion");
         declare_parameter("current_mode_topic", "~/current_mode");
         declare_parameter("cmd_vel_topic", "~/cmd_vel");
         declare_parameter("cmd_arm_topic", "~/cmd_arm");
@@ -40,6 +43,7 @@ namespace unitree_interface {
 
         // ========== Grab parameters ==========
         mode_change_service_name_ = get_parameter("mode_change_service_name").as_string();
+        ready_locomotion_service_name_ = get_parameter("ready_locomotion_service_name").as_string();
         current_mode_topic_ = get_parameter("current_mode_topic").as_string();
         cmd_vel_topic_ = get_parameter("cmd_vel_topic").as_string();
         cmd_arm_topic_ = get_parameter("cmd_arm_topic").as_string();
@@ -115,7 +119,17 @@ namespace unitree_interface {
                 handle_mode_change_request(request, response); // NOLINT
             }
         );
-        RCLCPP_INFO(logger_, "Mode change service created");
+        ready_locomotion_service_ = create_service<std_srvs::srv::Trigger>(
+            ready_locomotion_service_name_,
+            [this](
+                const std_srvs::srv::Trigger::Request::SharedPtr request, // NOLINT
+                std_srvs::srv::Trigger::Response::SharedPtr response
+            ) {
+                handle_ready_locomotion_request(request, response); // NOLINT
+            }
+        );
+
+        RCLCPP_INFO(logger_, "Services created");
     }
 
     void UnitreeInterface::initialize_publishers() {
@@ -244,7 +258,46 @@ namespace unitree_interface {
             response->success = success;
             response->message = "Mode transition successful";
         } else {
-            RCLCPP_INFO(logger_, "Mode transition failed");
+            RCLCPP_WARN(logger_, "Mode transition failed");
+        }
+    }
+
+    void UnitreeInterface::handle_ready_locomotion_request(
+        const std_srvs::srv::Trigger::Request::SharedPtr, // NOLINT
+        std_srvs::srv::Trigger::Response::SharedPtr response // NOLINT
+    ) {
+        if (std::holds_alternative<HighLevelMode>(current_mode_)) {
+            RCLCPP_INFO(logger_, "Ready locomotion sequence requested");
+
+            if (!sdk_wrapper_->damp()) {
+                response->success = false;
+                response->message = "damp() failed";
+                return;
+            }
+
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+
+            if (!sdk_wrapper_->stand_up()) {
+                response->success = false;
+                response->message = "stand_up() failed";
+                return;
+            }
+
+            std::this_thread::sleep_for(std::chrono::seconds(10));
+
+            if (!sdk_wrapper_->start()) {
+                response->success = false;
+                response->message = "start() failed";
+                return;
+            }
+
+            response->success = true;
+            response->message = "Locomotion ready";
+            RCLCPP_INFO(logger_, "Locomotion ready sequence completed");
+        } else {
+            response->success = false;
+            response->message = "Ready locomotion sequence attempted while not in HighLevelMode";
+            RCLCPP_WARN(logger_, "Ready locomotion sequence attempted while not in HighLevelMode");
         }
     }
 

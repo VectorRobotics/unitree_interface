@@ -12,6 +12,7 @@
 #include <geometry_msgs/msg/twist.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/empty.hpp>
+#include <std_srvs/srv/trigger.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 
 #include <memory>
@@ -44,6 +45,11 @@ namespace unitree_interface {
             unitree_interface_msgs::srv::ChangeControlMode::Response::SharedPtr response
         );
 
+        void handle_ready_locomotion_request(
+            std_srvs::srv::Trigger::Request::SharedPtr request,
+            std_srvs::srv::Trigger::Response::SharedPtr response
+        );
+
         void cmd_vel_callback(geometry_msgs::msg::Twist::SharedPtr message);
 
         void cmd_arm_callback(sensor_msgs::msg::JointState::SharedPtr message);
@@ -64,6 +70,7 @@ namespace unitree_interface {
         ControlMode current_mode_;
 
         std::string mode_change_service_name_;
+        std::string ready_locomotion_service_name_;
         std::string current_mode_topic_;
         std::string cmd_vel_topic_;
         std::string cmd_arm_topic_;
@@ -77,6 +84,7 @@ namespace unitree_interface {
         std::uint8_t volume_;
 
         rclcpp::Service<unitree_interface_msgs::srv::ChangeControlMode>::SharedPtr mode_change_service_;
+        rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr ready_locomotion_service_;
 
         rclcpp::Publisher<unitree_interface_msgs::msg::ControlMode>::SharedPtr current_mode_pub_;
         rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_pub_;

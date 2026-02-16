@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(unitree_interface)
 
 # Options
-option(ENABLE_LOW_LEVEL_MODE "Enable LowLevelMode usage" OFF)
+option(ENABLE_LOW_LEVEL_MODE "Enable LowLevelMode usage" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -16,6 +16,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(unitree_interface_msgs REQUIRED)
 
 # unitree_sdk2
@@ -50,6 +51,7 @@ ament_target_dependencies(unitree_interface_lib
   rclcpp
   geometry_msgs
   sensor_msgs
+  std_srvs
   unitree_interface_msgs
 )
 

@@ -20,39 +20,7 @@ namespace unitree_interface {
     */
 
     // ========== std::monostate ==========
-    ControlMode Transition<std::monostate, IdleMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
-        // TODO: Optimize this. Add early returns
-        if (!sdk_wrapper.damp()) {
-            RCLCPP_WARN(
-                sdk_wrapper.get_logger(),
-                "Call to damp failed during %s to %s transition",
-                ControlModeTraits<std::monostate>::name(),
-                ControlModeTraits<IdleMode>::name()
-            );
-        }
-
-        std::this_thread::sleep_for(std::chrono::seconds(5));
-
-        if (!sdk_wrapper.stand_up()) {
-            RCLCPP_WARN(
-                sdk_wrapper.get_logger(),
-                "Call to stand_up failed during %s to %s transition",
-                ControlModeTraits<std::monostate>::name(),
-                ControlModeTraits<IdleMode>::name()
-            );
-        }
-
-        std::this_thread::sleep_for(std::chrono::seconds(10));
-
-        if (!sdk_wrapper.start()) {
-            RCLCPP_WARN(
-                sdk_wrapper.get_logger(),
-                "Call to start failed during %s to %s transition",
-                ControlModeTraits<std::monostate>::name(),
-                ControlModeTraits<IdleMode>::name()
-            );
-        }
-
+    ControlMode Transition<std::monostate, IdleMode>::execute(UnitreeSDKWrapper& _) {
         return IdleMode{};
     }
 
