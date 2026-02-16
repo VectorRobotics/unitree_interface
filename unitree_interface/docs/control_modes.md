@@ -4,21 +4,13 @@
 
 ## Modes
 
-| ID | Name | Description |
-|----|------|-------------|
-| 0 | `std::monostate` | The system holds this state only immediately after initialization, before any transition has been requested and the sdk wrapper has not been initialized yet. |
-| 1 | `IdleMode` \| Idle | Initialized, no commands are forwarded to the G1. |
-| 2 | `HighLevelMode` \| High | Locomotion via `cmd_vel`, arm control via `cmd_arm`. |
-| 3 | `EmergencyMode` \| Emergency | Emergency stop state. Cannot transition out. All joints will be damped, with no gravity compensation. |
-| 4 | `LowLevelMode` \| LowLevel | Direct motor control via `cmd_low`. Build-time opt-in. |
-
-### LowLevelMode
-
-Direct motor gain and joint-level command control. Entered by releasing the `ai_sport` service through the MotionSwitcherClient. The G1 will go limp on entry.
-
-### EmergencyMode
-
-On entry, the system attempts to regain high-level control (if needed) and then enter damping mode. **Transitioning away from EmergencyMode is not allowed.**
+| ID | Mode | Name | Description |
+|----|------|------|-------------|
+| 0 | `std::monostate` | std::monostate | The system holds this state only immediately after initialization, before any transition has been requested and the sdk wrapper has not been initialized yet. |
+| 1 | `IdleMode` | Idle | Initialized, no commands are forwarded to the G1. |
+| 2 | `HighLevelMode` | High | Locomotion via `cmd_vel`, arm control via `cmd_arm`. |
+| 3 | `EmergencyMode` | Emergency | Emergency stop state. Cannot transition out. All joints will be damped, with no gravity compensation. |
+| 4 | `LowLevelMode` | LowLevel | Direct motor control via `cmd_low`. Build-time opt-in. |
 
 ## Transitions
 
