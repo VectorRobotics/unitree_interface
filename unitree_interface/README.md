@@ -7,8 +7,10 @@ The interface contains a state machine and command gate/multiplexer to prevent S
 
 ## TODO
 
-- Check if the G1 booted into development mode. If it did, transition to high-level before idle.
-- Investigate why the ros domain needs to be different to use the interface.
+- Add low-level damping mode
+- Add position hold (safe stop)
+- Add a way to set kp and kd values
+- Investigate why the ros domain needs to be different to use the interface
 - Get to a safe "mode" before transitioning High -> Low and vice-versa
 - Add more descriptive logging messages
 - Const-correctness?

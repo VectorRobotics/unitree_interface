@@ -15,3 +15,4 @@
 
 - The G1 oscillates while marching/walking in "regular" (low speed) mode. This behavior doesn't occur in the "running" (higher speed) mode.
 - There is a lock around the waist of the G1 that constricts some of the DoF. Removing it may help with the oscillation issue.
+- Occasionally, the G1 boots up into development / debug / low-level mode directly.
