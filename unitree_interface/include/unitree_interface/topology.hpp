@@ -210,12 +210,25 @@ namespace unitree_interface::joints {
         return 0.F;
     }
 
+    constexpr float damp_kd(Gearbox gearbox) {
+        switch (gearbox) {
+            case Gearbox::Small: return 10.F;
+            case Gearbox::Medium: return 10.F;
+            case Gearbox::Large: return 10.F;
+        }
+        return 0.F;
+    }
+
     constexpr float default_kp(JointIndex index) {
         return default_kp(joint_gearbox[static_cast<std::uint8_t>(index)]);
     }
 
     constexpr float default_kd(JointIndex index) {
         return default_kd(joint_gearbox[static_cast<std::uint8_t>(index)]);
+    }
+
+    constexpr float damp_kd(JointIndex index) {
+        return damp_kd(joint_gearbox[static_cast<std::uint8_t>(index)]);
     }
 
     // ========== Name mapping ==========
@@ -270,30 +283,6 @@ namespace unitree_interface::joints {
             }
         }
         return std::nullopt;
-    }
-
-    // ========== Validation ==========
-    template <std::size_t N>
-    inline bool all_in_group(
-        const std::vector<std::string>& names,
-        const std::array<JointIndex, N>& group
-    ) {
-        for (const auto& name : names) {
-            auto index = from_name(name);
-            if (!index || !contains(group, *index)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    inline bool has_duplicates(const std::vector<std::string>& names) {
-        for (std::size_t i = 0; i < names.size(); ++i) {
-            for (std::size_t j = i + 1; j < names.size(); ++j) {
-                if (names[i] == names[j]) { return true; }
-            }
-        }
-        return false;
     }
 
     // ========== Conversion ==========

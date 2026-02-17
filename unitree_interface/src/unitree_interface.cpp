@@ -320,32 +320,35 @@ namespace unitree_interface {
 
     void UnitreeInterface::cmd_arm_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
-            // TODO: Check command limits
-            if (!joints::has_duplicates(message->name)) {
-                auto [indices, position, velocity, effort, kp, kd] =
-                    joints::resolve_joint_commands(
-                        message->name,
-                        message->position,
-                        message->velocity,
-                        message->effort
-                    );
+            auto [indices, position, velocity, effort, kp, kd] =
+                joints::resolve_joint_commands(
+                    message->name,
+                    message->position,
+                    message->velocity,
+                    message->effort
 
-                sdk_wrapper_->send_arm_commands(
-                    indices,
-                    position,
-                    velocity,
-                    effort,
-                    kp,
-                    kd
                 );
-            } else {
-                RCLCPP_WARN_THROTTLE(
-                    logger_,
-                    *get_clock(),
-                    1000,
-                    "Invalid or duplicate joint names for cmd_arm"
-                );
+
+            for (std::size_t i = 0; i < indices.size(); ++i) {
+                const auto joint_index = static_cast<joints::JointIndex>(indices[i]);
+
+                if (!joints::contains(joints::upper_body, joint_index)) {
+                    position[i] = 0.0F;
+                    velocity[i] = 0.0F;
+                    effort[i] = 0.0F;
+                    kp[i] = 0.0F;
+                    kd[i] = 0.0F;
+                }
             }
+
+            sdk_wrapper_->send_arm_commands(
+                indices,
+                position,
+                velocity,
+                effort,
+                kp,
+                kd
+            );
         } else {
             RCLCPP_WARN_THROTTLE(
                 logger_,
@@ -359,32 +362,22 @@ namespace unitree_interface {
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     void UnitreeInterface::cmd_low_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
         if (std::holds_alternative<LowLevelMode>(current_mode_)) {
-            // TODO: Check command limits
-            if (!joints::has_duplicates(message->name)) {
-                auto [indices, position, velocity, effort, kp, kd] =
-                    joints::resolve_joint_commands(
-                        message->name,
-                        message->position,
-                        message->velocity,
-                        message->effort
-                    );
+            auto [indices, position, velocity, effort, kp, kd] =
+                joints::resolve_joint_commands(
+                    message->name,
+                    message->position,
+                    message->velocity,
+                    message->effort
+                );
 
-                sdk_wrapper_->send_low_commands(
-                    indices,
-                    position,
-                    velocity,
-                    effort,
-                    kp,
-                    kd
-                );
-            } else {
-                RCLCPP_WARN_THROTTLE(
-                    logger_,
-                    *get_clock(),
-                    1000,
-                    "Invalid or duplicate joint names for cmd_low"
-                );
-            }
+            sdk_wrapper_->send_low_commands(
+                indices,
+                position,
+                velocity,
+                effort,
+                kp,
+                kd
+            );
         } else {
             RCLCPP_WARN_THROTTLE(
                 logger_,
@@ -397,6 +390,7 @@ namespace unitree_interface {
 #endif
 
     void UnitreeInterface::estop_callback() {
+        // TODO: Figure out how to implement the low-level estop here
         auto [new_mode, _] = try_transition<EmergencyMode>(current_mode_, *sdk_wrapper_);
 
         current_mode_ = new_mode;
