@@ -325,9 +325,9 @@ namespace unitree_interface::joints {
 
             // Narrow doubles to floats
             indices.push_back(static_cast<std::uint8_t>(*index));
-            pos.push_back(i < position.size() ? static_cast<float>(position[i]) : 0.0f);
-            vel.push_back(i < velocity.size() ? static_cast<float>(velocity[i]) : 0.0f);
-            eff.push_back(i < effort.size()   ? static_cast<float>(effort[i])   : 0.0f);
+            pos.push_back(i < position.size() ? static_cast<float>(position[i]) : 0.0F);
+            vel.push_back(i < velocity.size() ? static_cast<float>(velocity[i]) : 0.0F);
+            eff.push_back(i < effort.size()   ? static_cast<float>(effort[i])   : 0.0F);
             kp.push_back(default_kp(*index));
             kd.push_back(default_kd(*index));
         }

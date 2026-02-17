@@ -87,7 +87,7 @@ namespace unitree_interface {
         const float audio_client_timeout
     ) {
         // Initialize ChannelFactory
-        unitree::robot::ChannelFactory::Instance()->Init(0, network_interface_);
+        unitree::robot::ChannelFactory::Instance()->Init(0);
         RCLCPP_INFO(logger_, "ChannelFactory initialized with interface: %s", network_interface_.c_str());
 
         // Initialize MotionSwitcherClient

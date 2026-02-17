@@ -5,6 +5,11 @@
 - Useful (AI generated) [reference](https://deepwiki.com/unitreerobotics/unitree_sdk2) for the Unitree SDK.
 - From FieldAI notes: "Avoid Command Conflicts: When programming via the SDK, always ensure the robot is in Development Mode to avoid the internal motion control program interfering with your custom commands."
 
+## ChannelFactory
+
+- Calling `ChannelFactory::Instance()->Init()` with a domain ID and network interface invokes the creation of a DDS domain. If the domain already exists (as is the case when using a ROS node), the call will fail and the SDK will cause the node to crash.
+- Calling `ChannelFactory::Instance()->Init()` with only a domain ID does not behave the same - perhaps attaching to the same domain instead of trying to create it.
+
 ## LocoClient
 
 - `LocoClient::Stand()` requires a call to `LocoClient::Damp()` before.
