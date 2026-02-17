@@ -11,6 +11,11 @@
 - `LocoClient::ZeroTorque()` also seems to only work after a call to `LocoClient::Damp()`.
 - Calls to `LocoClient::SetBalanceMode()` only take effect once the G1 "starts" (call to `LocoClient::Start()` returns 0). `LocoClient::SetBalanceMode(0)` will make it stand still until a velocity command is given. `LocoClient::SetBalanceMode(1)` will cause it to march in place.
 
+## rt/arm_sdk
+
+- Doesn't work if you don't call `LocoClient::Stand()`.
+- Need to control the waist to compensate for arm motion.
+
 ## G1 Hardware
 
 - The G1 oscillates while marching/walking in "regular" (low speed) mode. This behavior doesn't occur in the "running" (higher speed) mode.
