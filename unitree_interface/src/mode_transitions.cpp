@@ -3,9 +3,6 @@
 #include "unitree_interface/control_modes.hpp"
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
 
-#include <chrono>
-#include <thread>
-
 namespace unitree_interface {
 
     /*
