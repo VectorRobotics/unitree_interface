@@ -90,6 +90,15 @@ if(BUILD_TESTING)
     unitree_interface_lib
   )
 
+  # Test CRC
+  ament_add_gtest(test_crc_unit
+    test/unit/test_crc.cpp
+  )
+
+  target_link_libraries(test_crc_unit
+    unitree_interface_lib
+  )
+
   # Test mode transitions
   ament_add_gtest(test_mode_transitions_unit
     test/unit/test_mode_transitions.cpp

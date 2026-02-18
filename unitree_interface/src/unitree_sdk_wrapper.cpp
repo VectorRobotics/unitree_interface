@@ -1,5 +1,6 @@
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
 #include "unitree_interface/topology.hpp"
+#include "unitree_interface/crc.hpp"
 
 #include <unitree/robot/channel/channel_factory.hpp>
 #include <unitree/robot/channel/channel_publisher.hpp>
@@ -14,35 +15,6 @@
 #include <utility>
 
 namespace unitree_interface {
-
-    // TODO: Unit test to check if this behaves the same as Unitree's implementation
-    static std::uint32_t crc_32_core(const std::uint32_t* ptr, std::uint32_t len) noexcept {
-        std::uint32_t xbit = 0;
-        std::uint32_t data = 0;
-        std::uint32_t crc32 = 0xFFFFFFFF; // NOLINT
-
-        const std::uint32_t dw_polynomial = 0x04c11db7;
-        for (std::uint32_t i = 0; i < len; i++) {
-            xbit = 1 << 31; // NOLINT
-            data = ptr[i];
-
-            for (uint32_t bits = 0; bits < 32; bits++) { // NOLINT
-                if (crc32 & 0x80000000) { // NOLINT
-                    crc32 <<= 1;
-                    crc32 ^= dw_polynomial;
-                } else {
-                    crc32 <<= 1;
-                }
-
-                if ((data & xbit) != 0) {
-                    crc32 ^= dw_polynomial;
-                }
-      
-                xbit >>= 1;
-            }
-        }
-        return crc32;
-    }
 
     UnitreeSDKWrapper::UnitreeSDKWrapper(
         rclcpp::Logger logger
