@@ -15,6 +15,7 @@
 - `LocoClient::Stand()` requires a call to `LocoClient::Damp()` before.
 - `LocoClient::ZeroTorque()` also seems to only work after a call to `LocoClient::Damp()`.
 - Calls to `LocoClient::SetBalanceMode()` only take effect once the G1 "starts" (call to `LocoClient::Start()` returns 0). `LocoClient::SetBalanceMode(0)` will make it stand still until a velocity command is given. `LocoClient::SetBalanceMode(1)` will cause it to march in place.
+- `LocoClient::Move()` won't work if the commanded velocity is too small (e.g, < 0.1).
 
 ## rt/arm_sdk
 

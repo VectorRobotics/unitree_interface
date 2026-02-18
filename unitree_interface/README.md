@@ -7,7 +7,6 @@ The interface contains a state machine and command gate/multiplexer to prevent S
 
 ## TODO
 
-- Investigate why cmd_vel is not working
 - Let go of arms upon shutdown / release call
 - Add low-level damping mode
 - Add position hold (safe stop)
@@ -15,6 +14,5 @@ The interface contains a state machine and command gate/multiplexer to prevent S
 - Get to a safe "mode" before transitioning High -> Low and vice-versa
 - Add more descriptive logging messages
 - Const-correctness?
-- Thread-safety?
 - Build optimizations
 - Send a TTS message when the battery is low (stretch)
