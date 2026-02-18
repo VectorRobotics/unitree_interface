@@ -23,11 +23,12 @@ namespace unitree_interface {
           logger_(get_logger()),
           current_mode_(std::monostate{}) {
         // ========== Parameters ==========
-        declare_parameter("network_interface", "eth0");
         declare_parameter("motion_switcher_client_timeout", 5.0F); // NOLINT
         declare_parameter("loco_client_timeout", 10.0F); // NOLINT
         declare_parameter("audio_client_timeout", 5.0F); // NOLINT
         declare_parameter("volume", 100); // NOLINT
+        declare_parameter("ready_locomotion_stand_up_delay", 5); // NOLINT
+        declare_parameter("ready_locomotion_start_delay", 10); // NOLINT
 
         declare_parameter("mode_change_service_name", "~/change_mode");
         declare_parameter("ready_locomotion_service_name", "~/ready_locomotion");
@@ -63,7 +64,6 @@ namespace unitree_interface {
             return;
         }
 
-        const std::string interface_name = get_parameter("network_interface").as_string();
         const float msc_timeout = static_cast<float>(
             get_parameter("motion_switcher_client_timeout").as_double()
         );
@@ -74,10 +74,7 @@ namespace unitree_interface {
             get_parameter("audio_client_timeout").as_double()
         );
 
-        sdk_wrapper_ = std::make_unique<UnitreeSDKWrapper>(
-            interface_name,
-            logger_
-        );
+        sdk_wrapper_ = std::make_unique<UnitreeSDKWrapper>(logger_);
         // At this point, sdk_wrapper_ is guaranteed to not be a nullptr
 
         if (!sdk_wrapper_->initialize(msc_timeout, loco_client_timeout, audio_client_timeout)) {
@@ -269,13 +266,16 @@ namespace unitree_interface {
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
             RCLCPP_INFO(logger_, "Ready locomotion sequence requested");
 
+            const std::int64_t stand_up_delay = get_parameter("ready_locomotion_stand_up_delay").as_int();
+            const std::int64_t start_delay = get_parameter("ready_locomotion_start_delay").as_int();
+
             if (!sdk_wrapper_->damp()) {
                 response->success = false;
                 response->message = "damp() failed";
                 return;
             }
 
-            std::this_thread::sleep_for(std::chrono::seconds(5));
+            std::this_thread::sleep_for(std::chrono::seconds(stand_up_delay));
 
             if (!sdk_wrapper_->stand_up()) {
                 response->success = false;
@@ -283,7 +283,7 @@ namespace unitree_interface {
                 return;
             }
 
-            std::this_thread::sleep_for(std::chrono::seconds(10));
+            std::this_thread::sleep_for(std::chrono::seconds(start_delay));
 
             if (!sdk_wrapper_->start()) {
                 response->success = false;

@@ -45,10 +45,8 @@ namespace unitree_interface {
     }
 
     UnitreeSDKWrapper::UnitreeSDKWrapper(
-        std::string network_interface,
         rclcpp::Logger logger
-    ) : network_interface_(std::move(network_interface)),
-        logger_(std::move(logger)) {
+    ) : logger_(std::move(logger)) {
     }
 
     UnitreeSDKWrapper::~UnitreeSDKWrapper() = default;
@@ -88,7 +86,7 @@ namespace unitree_interface {
     ) {
         // Initialize ChannelFactory
         unitree::robot::ChannelFactory::Instance()->Init(0);
-        RCLCPP_INFO(logger_, "ChannelFactory initialized with interface: %s", network_interface_.c_str());
+        RCLCPP_INFO(logger_, "ChannelFactory initialized");
 
         // Initialize MotionSwitcherClient
         msc_ = std::make_unique<unitree::robot::b2::MotionSwitcherClient>();

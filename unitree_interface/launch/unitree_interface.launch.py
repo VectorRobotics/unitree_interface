@@ -31,6 +31,16 @@ def generate_launch_description():
             default_value='100',
             description='Volume for the speaker'
         ),
+        DeclareLaunchArgument(
+            'ready_locomotion_stand_up_delay',
+            default_value='5',
+            description='Delay before calling stand_up() after damp() in the ready locomotion sequence (seconds)'
+        ),
+        DeclareLaunchArgument(
+            'ready_locomotion_start_delay',
+            default_value='10',
+            description='Delay before calling start() after stand_up() in the ready locomotion sequence (seconds)'
+        ),
         Node(
             package='unitree_interface',
             executable='unitree_interface_node',
@@ -42,6 +52,8 @@ def generate_launch_description():
                 'loco_client_timeout': LaunchConfiguration('loco_client_timeout'),
                 'audio_client_timeout': LaunchConfiguration('audio_client_timeout'),
                 'volume': LaunchConfiguration('volume'),
+                'ready_locomotion_stand_up_delay': LaunchConfiguration('ready_locomotion_stand_up_delay'),
+                'ready_locomotion_start_delay': LaunchConfiguration('ready_locomotion_start_delay'),
             }],
         ),
     ])

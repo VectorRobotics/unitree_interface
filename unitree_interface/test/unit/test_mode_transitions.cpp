@@ -131,7 +131,7 @@ protected:
 };
 
 TEST_F(TryTransitionToTest, InvalidIDReturnsFailure) {
-    ui::UnitreeSDKWrapper wrapper("eth0", logger_);
+    ui::UnitreeSDKWrapper wrapper(logger_);
     ui::ControlMode from{ui::IdleMode{}};
 
     constexpr std::uint8_t invalid_id = 255;
@@ -142,7 +142,7 @@ TEST_F(TryTransitionToTest, InvalidIDReturnsFailure) {
 }
 
 TEST_F(TryTransitionToTest, MonostateIDReturnsFailure) {
-    ui::UnitreeSDKWrapper wrapper("eth0", logger_);
+    ui::UnitreeSDKWrapper wrapper(logger_);
     ui::ControlMode from{ui::IdleMode{}};
 
     // Transitioning to monostate is never valid
@@ -157,7 +157,7 @@ TEST_F(TryTransitionToTest, MonostateIDReturnsFailure) {
 }
 
 TEST_F(TryTransitionToTest, EmergencyIDNotInSwitchReturnsFailure) {
-    ui::UnitreeSDKWrapper wrapper("eth0", logger_);
+    ui::UnitreeSDKWrapper wrapper(logger_);
     ui::ControlMode from{ui::IdleMode{}};
 
     // Emergency is not in the switch (intentionally - use estop)

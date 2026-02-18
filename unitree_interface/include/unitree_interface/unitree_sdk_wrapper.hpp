@@ -37,7 +37,6 @@ namespace unitree_interface {
     class UnitreeSDKWrapper {
     public:
         explicit UnitreeSDKWrapper(
-            std::string network_interface,
             rclcpp::Logger logger
         );
 
@@ -143,7 +142,6 @@ namespace unitree_interface {
         void low_state_callback(const void* message);
 
         // ========== Member variables ==========
-        std::string network_interface_;
         rclcpp::Logger logger_;
         bool initialized_{false};
 
