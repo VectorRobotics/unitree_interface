@@ -32,6 +32,7 @@ namespace unitree_interface {
 
         declare_parameter("mode_change_service_name", "~/change_mode");
         declare_parameter("ready_locomotion_service_name", "~/ready_locomotion");
+        declare_parameter("release_arms_service_name", "~/release_arms");
         declare_parameter("current_mode_topic", "~/current_mode");
         declare_parameter("cmd_vel_topic", "~/cmd_vel");
         declare_parameter("cmd_arm_topic", "~/cmd_arm");
@@ -45,6 +46,7 @@ namespace unitree_interface {
         // ========== Grab parameters ==========
         mode_change_service_name_ = get_parameter("mode_change_service_name").as_string();
         ready_locomotion_service_name_ = get_parameter("ready_locomotion_service_name").as_string();
+        release_arms_service_name_ = get_parameter("release_arms_service_name").as_string();
         current_mode_topic_ = get_parameter("current_mode_topic").as_string();
         cmd_vel_topic_ = get_parameter("cmd_vel_topic").as_string();
         cmd_arm_topic_ = get_parameter("cmd_arm_topic").as_string();
@@ -116,6 +118,7 @@ namespace unitree_interface {
                 handle_mode_change_request(request, response); // NOLINT
             }
         );
+
         ready_locomotion_service_ = create_service<std_srvs::srv::Trigger>(
             ready_locomotion_service_name_,
             [this](
@@ -123,6 +126,16 @@ namespace unitree_interface {
                 std_srvs::srv::Trigger::Response::SharedPtr response
             ) {
                 handle_ready_locomotion_request(request, response); // NOLINT
+            }
+        );
+
+        release_arms_service_ = create_service<std_srvs::srv::Trigger>(
+            release_arms_service_name_,
+            [this](
+                const std_srvs::srv::Trigger::Request::SharedPtr request, // NOLINT
+                std_srvs::srv::Trigger::Response::SharedPtr response
+            ) {
+                handle_release_arms_request(request, response); // NOLINT
             }
         );
 
@@ -298,6 +311,21 @@ namespace unitree_interface {
             response->success = false;
             response->message = "Ready locomotion sequence attempted while not in HighLevelMode";
             RCLCPP_WARN(logger_, "Ready locomotion sequence attempted while not in HighLevelMode");
+        }
+    }
+
+    void UnitreeInterface::handle_release_arms_request(
+        const std_srvs::srv::Trigger::Request::SharedPtr, // NOLINT
+        std_srvs::srv::Trigger::Response::SharedPtr response // NOLINT
+    ) {
+        if (std::holds_alternative<HighLevelMode>(current_mode_)) {
+            sdk_wrapper_->release_arms();
+            response->success = true;
+            response->message = "Arms released";
+        } else {
+            response->success = false;
+            response->message = "Not in HighLevelMode";
+            RCLCPP_WARN(logger_, "Release arms requested while not in HighLevelMode");
         }
     }
 

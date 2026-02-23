@@ -271,6 +271,42 @@ namespace unitree_interface {
         return false;
     }
 
+    void UnitreeSDKWrapper::release_arms() {
+        if (!initialized_ || !arm_sdk_pub_) {
+            RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
+            return;
+        }
+
+        RCLCPP_INFO(logger_, "Releasing arm SDK control");
+
+        // Ramp down weight from 1.0 -> 0.0
+        constexpr int steps = 100;
+        constexpr float weight_per_step = 1.0F / static_cast<float>(steps);
+        constexpr auto interval = std::chrono::milliseconds(20);
+
+        const std::vector<std::uint8_t> empty_indices{};
+        const std::vector<float> empty{};
+
+        for (int i = 0; i <= steps; ++i) {
+            const float weight = 1.0F - (static_cast<float>(i) * weight_per_step);
+            auto command = construct_low_cmd(
+                empty_indices,
+                empty,
+                empty,
+                empty,
+                empty,
+                empty,
+                weight
+            );
+
+            arm_sdk_pub_->Write(command);
+
+            std::this_thread::sleep_for(interval);
+        }
+
+        RCLCPP_INFO(logger_, "Arm SDK control released");
+    }
+
     // ========== Low-level capabilities ==========
     LowCmd UnitreeSDKWrapper::construct_low_cmd(
         const std::vector<std::uint8_t>& indices,
@@ -279,17 +315,14 @@ namespace unitree_interface {
         const std::vector<float>& effort,
         const std::vector<float>& kp,
         const std::vector<float>& kd,
-        const bool use_weight
+        const float weight
     ) {
         LowCmd command{};
 
         command.mode_pr() = mode_pr_;
         command.mode_machine() = mode_machine_;
 
-        if (use_weight) {
-            // No command blending - straight control
-            command.motor_cmd().at(static_cast<std::uint8_t>(joints::JointIndex::WeightParameter)).q() = 1;
-        }
+        command.motor_cmd().at(static_cast<std::uint8_t>(joints::JointIndex::WeightParameter)).q() = weight;
 
         for (std::size_t i = 0; i < indices.size(); ++i) {
             const auto joint_index = indices[i];
@@ -334,7 +367,7 @@ namespace unitree_interface {
             effort,
             kp,
             kd,
-            true
+            1.0F
         );
 
         arm_sdk_pub_->Write(command);
@@ -359,8 +392,7 @@ namespace unitree_interface {
             velocity,
             effort,
             kp,
-            kd,
-            false
+            kd
         );
 
         low_cmd_pub_->Write(command);

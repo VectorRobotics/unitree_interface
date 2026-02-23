@@ -101,6 +101,8 @@ namespace unitree_interface {
             const std::vector<float>& kd
         );
 
+        void release_arms();
+
         // ========== Low-level capabilities ==========
         void send_low_commands(
             const std::vector<std::uint8_t>& indices,
@@ -135,7 +137,7 @@ namespace unitree_interface {
             const std::vector<float>& effort,
             const std::vector<float>& kp,
             const std::vector<float>& kd,
-            bool use_weight
+            float weight = 0.0F
         );
 
         // ========== Callbacks ==========

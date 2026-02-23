@@ -122,7 +122,6 @@ namespace unitree_interface {
     }
 
     ControlMode Transition<LowLevelMode, HighLevelMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
-        // TODO: Add "boot" sequence (damp() -> stand_up() -> start())
         if (sdk_wrapper.has_active_mode() || sdk_wrapper.select_mode("ai")) {
             return HighLevelMode{};
         }
