@@ -12,10 +12,12 @@ find_package(std_msgs REQUIRED)
 
 set(msg_files
   "msg/ControlMode.msg"
+  "msg/Profile.msg"
 )
 
 set(srv_files
   "srv/ChangeControlMode.srv"
+  "srv/SetProfile.srv"
 )
 
 rosidl_generate_interfaces(unitree_interface_msgs

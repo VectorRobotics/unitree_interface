@@ -1,11 +1,13 @@
 #ifndef VECTOR_UNITREE_INTERFACE_HPP
 #define VECTOR_UNITREE_INTERFACE_HPP
 
-#include "sensor_msgs/msg/joint_state.hpp"
 #include "unitree_interface/control_modes.hpp"
+#include "unitree_interface/profiles.hpp"
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
-#include "unitree_interface_msgs/srv/change_control_mode.hpp"
 #include "unitree_interface_msgs/msg/control_mode.hpp"
+#include "unitree_interface_msgs/msg/profile.hpp"
+#include "unitree_interface_msgs/srv/change_control_mode.hpp"
+#include "unitree_interface_msgs/srv/set_profile.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -55,6 +57,11 @@ namespace unitree_interface {
             std_srvs::srv::Trigger::Response::SharedPtr response
         );
 
+        void handle_set_profile_request(
+            unitree_interface_msgs::srv::SetProfile::Request::SharedPtr request,
+            unitree_interface_msgs::srv::SetProfile::Response::SharedPtr response
+        );
+
         void cmd_vel_callback(geometry_msgs::msg::Twist::SharedPtr message);
 
         void cmd_arm_callback(sensor_msgs::msg::JointState::SharedPtr message);
@@ -68,16 +75,21 @@ namespace unitree_interface {
         void tts_callback(std_msgs::msg::String::SharedPtr message);
 
         // ========== Publish methods ==========
-        void publish_current_mode();
+        void publish_current_mode() const;
+
+        void publish_current_profile() const;
 
         rclcpp::Logger logger_;
         std::unique_ptr<UnitreeSDKWrapper> sdk_wrapper_;
         ControlMode current_mode_;
+        Profile current_profile_;
 
         std::string mode_change_service_name_;
         std::string ready_locomotion_service_name_;
         std::string release_arms_service_name_;
+        std::string set_profile_service_name_;
         std::string current_mode_topic_;
+        std::string current_profile_topic_;
         std::string cmd_vel_topic_;
         std::string cmd_arm_topic_;
         std::string joint_states_topic_;
@@ -92,8 +104,10 @@ namespace unitree_interface {
         rclcpp::Service<unitree_interface_msgs::srv::ChangeControlMode>::SharedPtr mode_change_service_;
         rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr ready_locomotion_service_;
         rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr release_arms_service_;
+        rclcpp::Service<unitree_interface_msgs::srv::SetProfile>::SharedPtr set_profile_service_;
 
         rclcpp::Publisher<unitree_interface_msgs::msg::ControlMode>::SharedPtr current_mode_pub_;
+        rclcpp::Publisher<unitree_interface_msgs::msg::Profile>::SharedPtr current_profile_pub_;
         rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_pub_;
 
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;

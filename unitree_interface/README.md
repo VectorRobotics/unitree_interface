@@ -7,12 +7,7 @@ The interface contains a state machine and command gate/multiplexer to prevent S
 
 ## TODO
 
-- Let go of arms upon shutdown / release call
 - Add low-level damping mode
-- Add position hold (safe stop)
-- Add a way to set kp and kd values
-- Get to a safe "mode" before transitioning High -> Low and vice-versa
 - Add more descriptive logging messages
 - Const-correctness?
 - Build optimizations
-- Send a TTS message when the battery is low (stretch)

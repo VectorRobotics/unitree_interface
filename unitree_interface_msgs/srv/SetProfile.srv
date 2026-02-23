@@ -1,0 +1,6 @@
+# See Profile.msg for valid profile constants
+
+uint8 requested_profile
+---
+bool success
+string message

@@ -142,95 +142,6 @@ namespace unitree_interface::joints {
     constexpr auto upper_body = concat(arms, waist);
     constexpr auto all_joints = concat(legs, upper_body);
 
-    // ========== Motor gains ==========
-    enum class Gearbox : std::uint8_t {
-        Small,
-        Medium,
-        Large
-    };
-
-    // clang-format off
-    constexpr std::array<Gearbox, num_joints> joint_gearbox = {
-        // Left leg
-        Gearbox::Medium,
-        Gearbox::Medium,
-        Gearbox::Medium,
-        Gearbox::Large,
-        Gearbox::Small,
-        Gearbox::Small,
-
-        // Right leg
-        Gearbox::Medium,
-        Gearbox::Medium,
-        Gearbox::Medium,
-        Gearbox::Large,
-        Gearbox::Small,
-        Gearbox::Small,
-
-        // Waist
-        Gearbox::Medium,
-        Gearbox::Small,
-        Gearbox::Small,
-
-        // Left arm
-        Gearbox::Small,
-        Gearbox::Small,
-        Gearbox::Small,
-        Gearbox::Small,
-        Gearbox::Small,
-        Gearbox::Small,
-        Gearbox::Small,
-
-        // Right arm
-        Gearbox::Small,
-        Gearbox::Small,
-        Gearbox::Small,
-        Gearbox::Small,
-        Gearbox::Small,
-        Gearbox::Small,
-        Gearbox::Small,
-    };
-    // clang-format on
-
-    constexpr float default_kp(Gearbox gearbox) {
-        switch (gearbox) {
-            case Gearbox::Small: return 10.F;
-            case Gearbox::Medium: return 10.F;
-            case Gearbox::Large: return 100.F;
-        }
-        return 0.F;
-    }
-
-    constexpr float default_kd(Gearbox gearbox) {
-        switch (gearbox) {
-            case Gearbox::Small: return 2.F;
-            case Gearbox::Medium: return 2.F;
-            case Gearbox::Large: return 2.F;
-        }
-        return 0.F;
-    }
-
-    constexpr float damp_kd(Gearbox gearbox) {
-        switch (gearbox) {
-            case Gearbox::Small: return 10.F;
-            case Gearbox::Medium: return 10.F;
-            case Gearbox::Large: return 10.F;
-        }
-        return 0.F;
-    }
-
-    constexpr float default_kp(JointIndex index) {
-        return default_kp(joint_gearbox[static_cast<std::uint8_t>(index)]);
-    }
-
-    constexpr float default_kd(JointIndex index) {
-        return default_kd(joint_gearbox[static_cast<std::uint8_t>(index)]);
-    }
-
-    constexpr float damp_kd(JointIndex index) {
-        return damp_kd(joint_gearbox[static_cast<std::uint8_t>(index)]);
-    }
-
     // ========== Name mapping ==========
     // clang-format off
     constexpr std::array<const char*, num_joints> joint_names = {
@@ -297,7 +208,9 @@ namespace unitree_interface::joints {
         const std::vector<std::string>& names,
         const std::vector<double>& position,
         const std::vector<double>& velocity,
-        const std::vector<double>& effort
+        const std::vector<double>& effort,
+        const std::array<float, num_joints>& profile_kp,
+        const std::array<float, num_joints>& profile_kd
     ) {
         const std::size_t n = names.size();
 
@@ -316,20 +229,24 @@ namespace unitree_interface::joints {
         kd.reserve(n);
 
         for (std::size_t i = 0; i < n; ++i) {
-            auto index = from_name(names[i]);
+            auto joint_index = from_name(names[i]);
 
             // Skip unresolved names
-            if (!index.has_value()) {
+            if (!joint_index.has_value()) {
                 continue;
             }
 
             // Narrow doubles to floats
-            indices.push_back(static_cast<std::uint8_t>(*index));
+            const auto index = static_cast<std::uint8_t>(*joint_index);
+
+            indices.push_back(index);
+
             pos.push_back(i < position.size() ? static_cast<float>(position[i]) : 0.0F);
             vel.push_back(i < velocity.size() ? static_cast<float>(velocity[i]) : 0.0F);
             eff.push_back(i < effort.size()   ? static_cast<float>(effort[i])   : 0.0F);
-            kp.push_back(default_kp(*index));
-            kd.push_back(default_kd(*index));
+
+            kp.push_back(profile_kp[index]);
+            kd.push_back(profile_kd[index]);
         }
 
         return {indices, pos, vel, eff, kp, kd};

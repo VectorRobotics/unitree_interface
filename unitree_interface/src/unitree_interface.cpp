@@ -2,8 +2,10 @@
 
 #include "unitree_interface/control_modes.hpp"
 #include "unitree_interface/mode_transitions.hpp"
+#include "unitree_interface/profiles.hpp"
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
 #include "unitree_interface/topology.hpp"
+#include "unitree_interface_msgs/msg/profile.hpp"
 
 #include <rclcpp/logging.hpp>
 #include <rclcpp/qos.hpp>
@@ -21,7 +23,8 @@ namespace unitree_interface {
     UnitreeInterface::UnitreeInterface(const rclcpp::NodeOptions& options)
         : Node("unitree_interface", options),
           logger_(get_logger()),
-          current_mode_(std::monostate{}) {
+          current_mode_(std::monostate{}),
+          current_profile_(Default{}) {
         // ========== Parameters ==========
         declare_parameter("motion_switcher_client_timeout", 5.0F); // NOLINT
         declare_parameter("loco_client_timeout", 10.0F); // NOLINT
@@ -35,7 +38,9 @@ namespace unitree_interface {
         declare_parameter("mode_change_service_name", "~/change_mode");
         declare_parameter("ready_locomotion_service_name", "~/ready_locomotion");
         declare_parameter("release_arms_service_name", "~/release_arms");
+        declare_parameter("set_profile_service_name", "~/set_profile");
         declare_parameter("current_mode_topic", "~/current_mode");
+        declare_parameter("current_profile_topic", "~/current_profile");
         declare_parameter("cmd_vel_topic", "~/cmd_vel");
         declare_parameter("cmd_arm_topic", "~/cmd_arm");
         declare_parameter("joint_states_topic", "~/joint_states");
@@ -49,7 +54,9 @@ namespace unitree_interface {
         mode_change_service_name_ = get_parameter("mode_change_service_name").as_string();
         ready_locomotion_service_name_ = get_parameter("ready_locomotion_service_name").as_string();
         release_arms_service_name_ = get_parameter("release_arms_service_name").as_string();
+        set_profile_service_name_ = get_parameter("set_profile_service_name").as_string();
         current_mode_topic_ = get_parameter("current_mode_topic").as_string();
+        current_profile_topic_ = get_parameter("current_profile_topic").as_string();
         cmd_vel_topic_ = get_parameter("cmd_vel_topic").as_string();
         cmd_arm_topic_ = get_parameter("cmd_arm_topic").as_string();
         joint_states_topic_ = get_parameter("joint_states_topic").as_string();
@@ -97,8 +104,14 @@ namespace unitree_interface {
         current_mode_ = Transition<std::monostate, IdleMode>::execute(*sdk_wrapper_);
         RCLCPP_INFO(
             logger_,
-            "Initialized to %s",
+            "Initialized to control mode: %s",
             ControlModeTraits<IdleMode>::name()
+        );
+
+        RCLCPP_INFO(
+            logger_,
+            "Initialized to profile: %s",
+            ProfileTraits<Default>::name()
         );
 
         initialize_services();
@@ -108,6 +121,7 @@ namespace unitree_interface {
 
         setup_mode_dependent_subscriptions();
         publish_current_mode();
+        publish_current_profile();
     }
 
     void UnitreeInterface::initialize_services() {
@@ -141,6 +155,16 @@ namespace unitree_interface {
             }
         );
 
+        set_profile_service_ = create_service<unitree_interface_msgs::srv::SetProfile>(
+            set_profile_service_name_,
+            [this](
+                const unitree_interface_msgs::srv::SetProfile::Request::SharedPtr request, // NOLINT
+                unitree_interface_msgs::srv::SetProfile::Response::SharedPtr response
+            ) {
+                handle_set_profile_request(request, response); // NOLINT
+            }
+        );
+
         RCLCPP_INFO(logger_, "Services created");
     }
 
@@ -151,6 +175,11 @@ namespace unitree_interface {
 
         current_mode_pub_ = create_publisher<unitree_interface_msgs::msg::ControlMode>(
             current_mode_topic_,
+            qos
+        );
+
+        current_profile_pub_ = create_publisher<unitree_interface_msgs::msg::Profile>(
+            current_profile_topic_,
             qos
         );
 
@@ -261,6 +290,8 @@ namespace unitree_interface {
 
         current_mode_ = new_mode;
 
+        response->success = success;
+
         if (success) {
             RCLCPP_INFO(logger_, "Mode transition successful");
 
@@ -270,6 +301,7 @@ namespace unitree_interface {
             response->success = success;
             response->message = "Mode transition successful";
         } else {
+            response->message = "Mode transition failed";
             RCLCPP_WARN(logger_, "Mode transition failed");
         }
     }
@@ -335,6 +367,50 @@ namespace unitree_interface {
         }
     }
 
+    void UnitreeInterface::handle_set_profile_request(
+        const unitree_interface_msgs::srv::SetProfile::Request::SharedPtr request, // NOLINT
+        unitree_interface_msgs::srv::SetProfile::Response::SharedPtr response // NOLINT
+    ) {
+        const std::uint8_t requested = request->requested_profile;
+
+        switch (requested) {
+            case unitree_interface_msgs::msg::Profile::PROFILE_DEFAULT:
+                current_profile_ = Default{};
+                break;
+            case unitree_interface_msgs::msg::Profile::PROFILE_DAMP:
+                current_profile_ = Damp{};
+                break;
+            case unitree_interface_msgs::msg::Profile::PROFILE_VISUAL_SERVO:
+                current_profile_ = VisualServo{};
+                break;
+            case unitree_interface_msgs::msg::Profile::PROFILE_WHOLE_BODY_CONTROL:
+                current_profile_ = WholeBodyControl{};
+                break;
+            case unitree_interface_msgs::msg::Profile::PROFILE_EFFORT_ONLY:
+                current_profile_ = EffortOnly{};
+                break;
+            default:
+                response->success = false;
+                response->message = "Unknown profile ID";
+                RCLCPP_WARN(logger_, "Unknown profile ID: %d", requested);
+                return;
+        }
+
+        publish_current_profile();
+
+        response->success = true;
+        response->message = std::visit(
+            [](const auto& p) -> std::string {
+                using ProfileType = std::decay_t<decltype(p)>;
+
+                return std::string("Profile set to: ") + ProfileTraits<ProfileType>::name();
+            },
+            current_profile_
+        );
+
+        RCLCPP_INFO(logger_, "%s", response->message.c_str());
+    }
+
     void UnitreeInterface::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr message) { // NOLINT
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
             const auto vx = static_cast<float>(message->linear.x); // m/s
@@ -354,13 +430,16 @@ namespace unitree_interface {
 
     void UnitreeInterface::cmd_arm_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
+            const auto [profile_kp, profile_kd] = get_profile_gains(current_profile_);
+
             auto [indices, position, velocity, effort, kp, kd] =
                 joints::resolve_joint_commands(
                     message->name,
                     message->position,
                     message->velocity,
-                    message->effort
-
+                    message->effort,
+                    profile_kp,
+                    profile_kd
                 );
 
             for (std::size_t i = 0; i < indices.size(); ++i) {
@@ -396,12 +475,16 @@ namespace unitree_interface {
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     void UnitreeInterface::cmd_low_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
         if (std::holds_alternative<LowLevelMode>(current_mode_)) {
+            const auto [profile_kp, profile_kd] = get_profile_gains(current_profile_);
+
             auto [indices, position, velocity, effort, kp, kd] =
                 joints::resolve_joint_commands(
                     message->name,
                     message->position,
                     message->velocity,
-                    message->effort
+                    message->effort,
+                    profile_kp,
+                    profile_kd
                 );
 
             sdk_wrapper_->send_low_commands(
@@ -438,7 +521,7 @@ namespace unitree_interface {
     }
 
     // ========== Publish methods ==========
-    void UnitreeInterface::publish_current_mode() {
+    void UnitreeInterface::publish_current_mode() const {
         auto [mode_id, mode_name] = std::visit(
             [](const auto& mode) {
                 using ModeType = std::decay_t<decltype(mode)>;
@@ -457,6 +540,27 @@ namespace unitree_interface {
         message.current_mode_name = mode_name;
 
         current_mode_pub_->publish(message);
+    }
+
+    void UnitreeInterface::publish_current_profile() const {
+        auto [profile_id, profile_name] = std::visit(
+            [](const auto& profile) {
+                using ProfileType = std::decay_t<decltype(profile)>;
+
+                return std::make_tuple(
+                    ProfileTraits<ProfileType>::id,
+                    ProfileTraits<ProfileType>::name()
+                );
+            },
+            current_profile_
+        );
+
+        unitree_interface_msgs::msg::Profile message;
+        message.header.stamp = now();
+        message.current_profile_id = profile_id;
+        message.current_profile_name = profile_name;
+
+        current_profile_pub_->publish(message);
     }
 
 } // namespace unitree_interface
