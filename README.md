@@ -13,12 +13,14 @@ ROS 2 interface for the Unitree G1 humanoid robot (29 DoF). Bridges the Unitree 
 | `~/change_mode` | `unitree_interface_msgs/srv/ChangeControlMode` | Request a control mode transition. See `ControlMode.msg` for valid mode IDs. |
 | `~/ready_locomotion` | `std_srvs/srv/Trigger` | Runs the locomotion ready sequence (damp, stand up, start). Blocking, retryable on failure. |
 | `~/release_arms` | `std_srvs/srv/Trigger` | Ramps down the arm SDK weight from 1.0 to 0.0, handing upper-body control back to the locomotion controller. Blocking (~5s by default). |
+| `~/set_profile` | `unitree_interface_msgs/srv/SetProfile` | Switch the active gain profile. See `Profile.msg` for valid profile IDs. |
 
 ## Published Topics
 
 | Topic | Type | Description |
 |-------|------|-------------|
 | `~/current_mode` | `unitree_interface_msgs/msg/ControlMode` | Current control mode (latched, reliable). |
+| `~/current_profile` | `unitree_interface_msgs/msg/Profile` | Current gain profile (latched, reliable). |
 | `~/joint_states` | `sensor_msgs/msg/JointState` | Joint state feedback from the robot. Published at the SDK's `rt/lowstate` rate. Publishes for all 29 joints, using URDF joint names. |
 
 ## Subscribed Topics
@@ -26,7 +28,7 @@ ROS 2 interface for the Unitree G1 humanoid robot (29 DoF). Bridges the Unitree 
 | Topic | Type | Mode | Description |
 |-------|------|------|-------------|
 | `~/cmd_vel` | `geometry_msgs/msg/Twist` | HighLevelMode | Velocity commands (linear.x, linear.y, angular.z). |
-| `~/cmd_arm` | `sensor_msgs/msg/JointState` | HighLevelMode | Arm joint commands via `rt/arm_sdk`. Uses URDF joint names for upper body joints (arms + waist). Position, velocity, and effort fields are used. Motor kp/kd are set automatically based on gearbox type. |
+| `~/cmd_arm` | `sensor_msgs/msg/JointState` | HighLevelMode | Arm joint commands via `rt/arm_sdk`. Uses URDF joint names for upper body joints (arms + waist). Position, velocity, and effort fields are used. Motor kp/kd are set by the active gain profile. |
 | `~/cmd_low` | `sensor_msgs/msg/JointState` | LowLevelMode | Direct low-level motor commands for all 29 joints. Requires `UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE` at build time. |
 | `/estop` | `std_msgs/msg/Empty` | Any | Emergency stop. Transitions to EmergencyMode (damps all joints). Global topic. |
 | `~/tts` | `std_msgs/msg/String` | Any | Text-to-speech via the robot's speaker. |
@@ -47,9 +49,11 @@ See [`control_modes.md`](unitree_interface/docs/control_modes.md).
 | `mode_change_service_name` | string | `"~/change_mode"` | Service name for mode changes. |
 | `ready_locomotion_service_name` | string | `"~/ready_locomotion"` | Service name for the locomotion ready sequence. |
 | `release_arms_service_name` | string | `"~/release_arms"` | Service name for releasing arm SDK control. |
+| `set_profile_service_name` | string | `"~/set_profile"` | Service name for switching gain profiles. |
 | `release_arms_steps` | int | `250` | Number of weight ramp-down steps for arm release. |
 | `release_arms_interval_ms` | int | `20` | Delay (ms) between each ramp-down step. Total duration = steps × interval. |
 | `current_mode_topic` | string | `"~/current_mode"` | Topic for current mode publication. |
+| `current_profile_topic` | string | `"~/current_profile"` | Topic for current profile publication. |
 | `cmd_vel_topic` | string | `"~/cmd_vel"` | Topic for velocity commands. |
 | `cmd_arm_topic` | string | `"~/cmd_arm"` | Topic for arm commands. |
 | `joint_states_topic` | string | `"~/joint_states"` | Topic for joint state feedback. |
@@ -73,6 +77,20 @@ uint8 current_mode_id
 string current_mode_name
 ```
 
+### `Profile.msg`
+
+```
+uint8 PROFILE_DEFAULT            = 0
+uint8 PROFILE_DAMP               = 1
+uint8 PROFILE_VISUAL_SERVO       = 2
+uint8 PROFILE_WHOLE_BODY_CONTROL = 3
+uint8 PROFILE_EFFORT_ONLY        = 4
+
+std_msgs/Header header
+uint8 current_profile_id
+string current_profile_name
+```
+
 ### `ChangeControlMode.srv`
 
 ```
@@ -82,6 +100,19 @@ bool success
 string message
 ```
 
+### `SetProfile.srv`
+
+```
+uint8 requested_profile
+---
+bool success
+string message
+```
+
+## Gain Profiles
+
+Each profile defines per-joint kp/kd gains for all 29 joints. The active profile is selected via `~/set_profile` and determines the motor gains used by `~/cmd_arm` and `~/cmd_low`. See [`profiles.hpp`](unitree_interface/include/unitree_interface/profiles.hpp) for definitions.
+
 ## Joints
 
-All joint topics use URDF-style names. See [`topology.hpp`](unitree_interface/include/unitree_interface/topology.hpp) for gearbox assignments.
+All joint topics use URDF-style names. See [`topology.hpp`](unitree_interface/include/unitree_interface/topology.hpp) for joint indices and groups.
