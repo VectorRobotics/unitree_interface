@@ -113,6 +113,62 @@ string message
 
 Each profile defines per-joint kp/kd gains for all 29 joints. The active profile is selected via `~/set_profile` and determines the motor gains used by `~/cmd_arm` and `~/cmd_low`. See [`profiles.hpp`](unitree_interface/include/unitree_interface/profiles.hpp) for definitions.
 
+## Usage Examples
+
+Switch to HighLevel mode:
+
+```bash
+ros2 service call /unitree_interface/change_mode unitree_interface_msgs/srv/ChangeControlMode "{requested_mode: 2}"
+```
+
+Switch to LowLevel mode (if enabled at build time):
+
+```bash
+ros2 service call /unitree_interface/change_mode unitree_interface_msgs/srv/ChangeControlMode "{requested_mode: 4}"
+```
+
+Run the locomotion ready sequence (damp, stand up, start):
+
+```bash
+ros2 service call /unitree_interface/ready_locomotion std_srvs/srv/Trigger "{}"
+```
+
+Release arm SDK control back to the locomotion controller:
+
+```bash
+ros2 service call /unitree_interface/release_arms std_srvs/srv/Trigger "{}"
+```
+
+Switch to the VisualServo gain profile:
+
+```bash
+ros2 service call /unitree_interface/set_profile unitree_interface_msgs/srv/SetProfile "{requested_profile: 2}"
+```
+
+Switch to the EffortOnly gain profile (kp=0, kd=0):
+
+```bash
+ros2 service call /unitree_interface/set_profile unitree_interface_msgs/srv/SetProfile "{requested_profile: 4}"
+```
+
+Send a velocity command:
+
+```bash
+ros2 topic pub --once /unitree_interface/cmd_vel geometry_msgs/msg/Twist "{linear: {x: 1.15, y: 0.0}, angular: {z: 0.0}}"
+```
+
+Send a text-to-speech command:
+
+```bash
+ros2 topic pub --once /unitree_interface/tts std_msgs/msg/String "{data: 'hello world'}"
+```
+
+Emergency stop:
+
+```bash
+ros2 topic pub --once /estop std_msgs/msg/Empty "{}"
+```
+
 ## Joints
 
 All joint topics use URDF-style names. See [`topology.hpp`](unitree_interface/include/unitree_interface/topology.hpp) for joint indices and groups.
