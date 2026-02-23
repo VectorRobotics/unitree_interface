@@ -271,18 +271,16 @@ namespace unitree_interface {
         return false;
     }
 
-    void UnitreeSDKWrapper::release_arms() {
+    void UnitreeSDKWrapper::release_arms(const int steps, const int interval_ms) {
         if (!initialized_ || !arm_sdk_pub_) {
             RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
             return;
         }
 
-        RCLCPP_INFO(logger_, "Releasing arm SDK control");
+        RCLCPP_INFO(logger_, "Releasing arm SDK control (%d steps, %dms interval)", steps, interval_ms);
 
-        // Ramp down weight from 1.0 -> 0.0
-        constexpr int steps = 100;
-        constexpr float weight_per_step = 1.0F / static_cast<float>(steps);
-        constexpr auto interval = std::chrono::milliseconds(20);
+        const float weight_per_step = 1.0F / static_cast<float>(steps);
+        const auto interval = std::chrono::milliseconds(interval_ms);
 
         const std::vector<std::uint8_t> empty_indices{};
         const std::vector<float> empty{};

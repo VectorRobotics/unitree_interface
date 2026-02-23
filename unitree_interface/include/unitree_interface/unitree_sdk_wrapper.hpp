@@ -101,7 +101,7 @@ namespace unitree_interface {
             const std::vector<float>& kd
         );
 
-        void release_arms();
+        void release_arms(int steps, int interval_ms);
 
         // ========== Low-level capabilities ==========
         void send_low_commands(

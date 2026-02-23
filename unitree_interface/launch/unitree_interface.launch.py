@@ -28,7 +28,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'volume',
-            default_value='100',
+            default_value='80',
             description='Volume for the speaker'
         ),
         DeclareLaunchArgument(
@@ -40,6 +40,16 @@ def generate_launch_description():
             'ready_locomotion_start_delay',
             default_value='10',
             description='Delay before calling start() after stand_up() in the ready locomotion sequence (seconds)'
+        ),
+        DeclareLaunchArgument(
+            'release_arms_steps',
+            default_value='250',
+            description='Number of steps over which to return control of arms to the Unitree locomotion policy'
+        ),
+        DeclareLaunchArgument(
+            'release_arms_interval_ms',
+            default_value='20',
+            description='Delay between subsequent messages to release control of arms (milliseconds)'
         ),
         Node(
             package='unitree_interface',

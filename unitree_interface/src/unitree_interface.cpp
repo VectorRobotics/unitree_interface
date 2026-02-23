@@ -29,6 +29,8 @@ namespace unitree_interface {
         declare_parameter("volume", 100); // NOLINT
         declare_parameter("ready_locomotion_stand_up_delay", 5); // NOLINT
         declare_parameter("ready_locomotion_start_delay", 10); // NOLINT
+        declare_parameter("release_arms_steps", 250); // NOLINT
+        declare_parameter("release_arms_interval_ms", 20); // NOLINT
 
         declare_parameter("mode_change_service_name", "~/change_mode");
         declare_parameter("ready_locomotion_service_name", "~/ready_locomotion");
@@ -319,7 +321,11 @@ namespace unitree_interface {
         std_srvs::srv::Trigger::Response::SharedPtr response // NOLINT
     ) {
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
-            sdk_wrapper_->release_arms();
+            const auto steps = static_cast<int>(get_parameter("release_arms_steps").as_int());
+            const auto interval_ms = static_cast<int>(get_parameter("release_arms_interval_ms").as_int());
+
+            sdk_wrapper_->release_arms(steps, interval_ms);
+
             response->success = true;
             response->message = "Arms released";
         } else {
