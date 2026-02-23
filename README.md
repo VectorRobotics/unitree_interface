@@ -12,6 +12,7 @@ ROS 2 interface for the Unitree G1 humanoid robot (29 DoF). Bridges the Unitree 
 |---------|------|-------------|
 | `~/change_mode` | `unitree_interface_msgs/srv/ChangeControlMode` | Request a control mode transition. See `ControlMode.msg` for valid mode IDs. |
 | `~/ready_locomotion` | `std_srvs/srv/Trigger` | Runs the locomotion ready sequence (damp, stand up, start). Blocking, retryable on failure. |
+| `~/release_arms` | `std_srvs/srv/Trigger` | Ramps down the arm SDK weight from 1.0 to 0.0, handing upper-body control back to the locomotion controller. Blocking (~5s by default). |
 
 ## Published Topics
 
@@ -45,6 +46,9 @@ See [`control_modes.md`](unitree_interface/docs/control_modes.md).
 | `volume` | int | `100` | Speaker volume (0-100). |
 | `mode_change_service_name` | string | `"~/change_mode"` | Service name for mode changes. |
 | `ready_locomotion_service_name` | string | `"~/ready_locomotion"` | Service name for the locomotion ready sequence. |
+| `release_arms_service_name` | string | `"~/release_arms"` | Service name for releasing arm SDK control. |
+| `release_arms_steps` | int | `250` | Number of weight ramp-down steps for arm release. |
+| `release_arms_interval_ms` | int | `20` | Delay (ms) between each ramp-down step. Total duration = steps × interval. |
 | `current_mode_topic` | string | `"~/current_mode"` | Topic for current mode publication. |
 | `cmd_vel_topic` | string | `"~/cmd_vel"` | Topic for velocity commands. |
 | `cmd_arm_topic` | string | `"~/cmd_arm"` | Topic for arm commands. |
