@@ -41,7 +41,6 @@ See [`control_modes.md`](unitree_interface/docs/control_modes.md).
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `network_interface` | string | `"eth0"` | Network interface for Unitree SDK communication. |
 | `motion_switcher_client_timeout` | double | `5.0` | Timeout (s) for the motion switcher client. |
 | `loco_client_timeout` | double | `10.0` | Timeout (s) for the locomotion client. |
 | `audio_client_timeout` | double | `5.0` | Timeout (s) for the audio client. |
