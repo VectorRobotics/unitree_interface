@@ -58,11 +58,13 @@ def generate_launch_description():
                 'volume': LaunchConfiguration('volume'),
                 'ready_locomotion_stand_up_delay': LaunchConfiguration('ready_locomotion_stand_up_delay'),
                 'ready_locomotion_start_delay': LaunchConfiguration('ready_locomotion_start_delay'),
+                'release_arms_steps': LaunchConfiguration('release_arms_steps'),
+                'release_arms_interval_ms': LaunchConfiguration('release_arms_interval_ms'),
             }],
             remappings=[
                 ('/unitree_interface/cmd_arm', '/joint_states'),
                 ('/unitree_interface/cmd_low', '/joint_states'),
-                ('/unitree_interface/joint_states', '/feedback')
+                ('/unitree_interface/joint_states', '/feedback'),
             ],
         ),
     ])
