@@ -110,11 +110,50 @@ namespace unitree_interface {
     };
 
     // ========== Damp ==========
-    // TODO: Tune these
+    // TODO: Test these
     struct Damp {
-        static constexpr std::array<float, joints::num_joints> kp = Default::kp;
+        static constexpr std::array<float, joints::num_joints> kp {};
 
-        static constexpr std::array<float, joints::num_joints> kd = Default::kd;
+        static constexpr std::array<float, joints::num_joints> kd {
+            // Left leg
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+
+            // Right leg
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+
+            // Waist
+            8.0F,
+            8.0F,
+            8.0F,
+
+            // Left arm
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+
+            // Right arm
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+            8.0F,
+        };
     };
 
     template <>
