@@ -7,11 +7,6 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
-            'network_interface',
-            default_value='enp86s0',
-            description='Network interface for Unitree SDK communication'
-        ),
-        DeclareLaunchArgument(
             'motion_switcher_client_timeout',
             default_value='5.0',
             description='Timeout for MotionSwitcherClient (seconds)'
@@ -57,7 +52,6 @@ def generate_launch_description():
             name='unitree_interface',
             output='screen',
             parameters=[{
-                'network_interface': LaunchConfiguration('network_interface'),
                 'motion_switcher_client_timeout': LaunchConfiguration('motion_switcher_client_timeout'),
                 'loco_client_timeout': LaunchConfiguration('loco_client_timeout'),
                 'audio_client_timeout': LaunchConfiguration('audio_client_timeout'),
@@ -65,5 +59,10 @@ def generate_launch_description():
                 'ready_locomotion_stand_up_delay': LaunchConfiguration('ready_locomotion_stand_up_delay'),
                 'ready_locomotion_start_delay': LaunchConfiguration('ready_locomotion_start_delay'),
             }],
+            remappings=[
+                ('/unitree_interface/cmd_arm', '/joint_states'),
+                ('/unitree_interface/cmd_low', '/joint_states'),
+                ('/unitree_interface/joint_states', '/feedback')
+            ],
         ),
     ])
