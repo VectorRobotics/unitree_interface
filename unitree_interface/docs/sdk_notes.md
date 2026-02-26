@@ -16,6 +16,7 @@
 - `LocoClient::ZeroTorque()` also seems to only work after a call to `LocoClient::Damp()`.
 - Calls to `LocoClient::SetBalanceMode()` only take effect once the G1 "starts" (call to `LocoClient::Start()` returns 0). `LocoClient::SetBalanceMode(0)` will make it stand still until a velocity command is given. `LocoClient::SetBalanceMode(1)` will cause it to march in place.
 - `LocoClient::Move()` won't work if the commanded velocity is too small (e.g, < 0.1).
+- `LocoClient::Start()` puts the internal motion control FSM in state `500`. This state exhibit jittering during motion. The controller directly sets the internal motion control FSM to `501`, which does not exhibit jittering.
 
 ## rt/arm_sdk
 

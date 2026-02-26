@@ -260,7 +260,7 @@ namespace unitree_interface {
             return false;
         }
 
-        const std::int32_t ret = loco_client_->Start();
+        const std::int32_t ret = loco_client_->SetFsmId(501);
 
         if (ret == 0) {
             RCLCPP_INFO(logger_, "Start command succeeded");
