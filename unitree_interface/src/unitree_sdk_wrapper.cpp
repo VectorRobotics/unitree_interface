@@ -11,6 +11,7 @@
 
 #include <rclcpp/logging.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <utility>
 
@@ -328,7 +329,7 @@ namespace unitree_interface {
             command.motor_cmd().at(joint_index).mode() = 1;
             command.motor_cmd().at(joint_index).q()    = position[i];
             command.motor_cmd().at(joint_index).dq()   = velocity[i];
-            command.motor_cmd().at(joint_index).tau()   = effort[i];
+            command.motor_cmd().at(joint_index).tau()  = std::clamp(effort[i], -joints::effort_limit[joint_index], joints::effort_limit[joint_index]);
             command.motor_cmd().at(joint_index).kp()   = kp[i];
             command.motor_cmd().at(joint_index).kd()   = kd[i];
         }

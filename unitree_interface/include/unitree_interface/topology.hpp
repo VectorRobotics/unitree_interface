@@ -142,6 +142,50 @@ namespace unitree_interface::joints {
     constexpr auto upper_body = concat(arms, waist);
     constexpr auto all_joints = concat(legs, upper_body);
 
+    // ========== Effort limits ==========
+    // clang-format off
+    constexpr std::array<float, num_joints> effort_limit {
+        // Left leg
+        88.0F,
+        88.0F, // 139.0F in the URDF
+        88.0F,
+        139.0F,
+        35.0F,
+        35.0F,
+
+        // Right leg
+        88.0F,
+        88.0F, // 139.0F in the URDF
+        88.0F,
+        139.0F,
+        35.0F,
+        35.0F,
+
+        // Waist
+        88.0F,
+        35.0F,
+        35.0F,
+
+        // Left arm
+        25.0F,
+        25.0F,
+        25.0F,
+        25.0F,
+        5.0F,
+        5.0F,
+        5.0F,
+
+        // Right arm
+        25.0F,
+        25.0F,
+        25.0F,
+        25.0F,
+        5.0F,
+        5.0F,
+        5.0F,
+    };
+    // clang-format on
+
     // ========== Name mapping ==========
     // clang-format off
     constexpr std::array<const char*, num_joints> joint_names = {
