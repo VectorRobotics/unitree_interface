@@ -223,9 +223,12 @@ namespace unitree_interface {
     >;
 
     inline GainArrays get_profile_gains(const Profile& profile) {
-        return std::visit([](const auto& p) -> GainArrays {
-            return {p.kp, p.kd};
-        }, profile);
+        return std::visit(
+            [](const auto& p) -> GainArrays {
+                return {p.kp, p.kd};
+            },
+            profile
+        );
     }
 
 } // namespace unitree_interface

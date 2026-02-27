@@ -16,7 +16,8 @@
 - `LocoClient::ZeroTorque()` also seems to only work after a call to `LocoClient::Damp()`.
 - Calls to `LocoClient::SetBalanceMode()` only take effect once the G1 "starts" (call to `LocoClient::Start()` returns 0). `LocoClient::SetBalanceMode(0)` will make it stand still until a velocity command is given. `LocoClient::SetBalanceMode(1)` will cause it to march in place.
 - `LocoClient::Move()` won't work if the commanded velocity is too small (e.g, < 0.1).
-- `LocoClient::Start()` puts the internal motion control FSM in state `500`. This state exhibit jittering during motion. The controller directly sets the internal motion control FSM to `501`, which does not exhibit jittering.
+- `LocoClient::Start()` puts the internal motion control FSM in state `500`. This state exhibit jittering during motion. The hand-held controller's `Regular Mode` directly sets the internal motion control FSM to `501`, which does not exhibit jittering.
+- The hand-held controller's `Running Mode` directly sets the internal motion contorl FSM to `801` and seems to exhibit even better balance than `Regular Mode`.
 
 ## rt/arm_sdk
 
@@ -25,7 +26,5 @@
 
 ## G1 Hardware
 
-- The G1 oscillates while marching/walking in "regular" (low speed) mode. This behavior doesn't occur in the "running" (higher speed) mode.
-- There is a lock around the waist of the G1 that constricts some of the DoF. Removing it may help with the oscillation issue.
 - Occasionally, the G1 boots up into development / debug / low-level mode directly.
 - If the `mode_machine` provided in `LowCmd` doesn't match the `mode_machine` in `LowState`, the command sent to the G1 produces no action.
