@@ -356,7 +356,9 @@ namespace unitree_interface {
             const auto steps = static_cast<int>(get_parameter("release_arms_steps").as_int());
             const auto interval_ms = static_cast<int>(get_parameter("release_arms_interval_ms").as_int());
 
+            releasing_arms_ = true;
             sdk_wrapper_->release_arms(steps, interval_ms);
+            releasing_arms_ = false;
 
             response->success = true;
             response->message = "Arms released";
@@ -429,6 +431,16 @@ namespace unitree_interface {
     }
 
     void UnitreeInterface::cmd_arm_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
+        if (releasing_arms_) {
+            RCLCPP_WARN_THROTTLE(
+                logger_,
+                *get_clock(),
+                1000,
+                "Arm commands blocked while releasing arms"
+            );
+            return;
+        }
+
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
             const auto [profile_kp, profile_kd] = get_profile_gains(current_profile_);
 

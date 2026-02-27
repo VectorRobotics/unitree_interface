@@ -17,6 +17,7 @@
 #include <std_srvs/srv/trigger.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 
+#include <atomic>
 #include <memory>
 
 namespace unitree_interface {
@@ -83,6 +84,7 @@ namespace unitree_interface {
         std::unique_ptr<UnitreeSDKWrapper> sdk_wrapper_;
         ControlMode current_mode_;
         Profile current_profile_;
+        std::atomic<bool> releasing_arms_{false};
 
         std::string mode_change_service_name_;
         std::string ready_locomotion_service_name_;
