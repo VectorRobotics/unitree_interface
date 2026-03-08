@@ -1,6 +1,7 @@
 #ifndef VECTOR_UNITREE_SDK_WRAPPER_HPP
 #define VECTOR_UNITREE_SDK_WRAPPER_HPP
 
+#include "unitree_interface/topology.hpp"
 #include <unitree/robot/channel/channel_publisher.hpp>
 #include <unitree/robot/channel/channel_subscriber.hpp>
 #include <unitree/idl/hg/LowCmd_.hpp>
@@ -13,6 +14,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <chrono>
 
 // ========== Forward declarations ==========
 namespace rclcpp {
@@ -77,6 +79,8 @@ namespace unitree_interface {
 
         bool select_mode(const std::string& mode_name);
 
+        void reset_integral_error();
+
         // ========== High-level capabilities ==========
         bool send_velocity_command(
             float vx,
@@ -98,7 +102,8 @@ namespace unitree_interface {
             const std::vector<float>& velocity,
             const std::vector<float>& effort,
             const std::vector<float>& kp,
-            const std::vector<float>& kd
+            const std::vector<float>& kd,
+            const std::vector<float>& ki
         );
 
         void release_arms(int steps, int interval_ms);
@@ -110,7 +115,8 @@ namespace unitree_interface {
             const std::vector<float>& velocity,
             const std::vector<float>& effort,
             const std::vector<float>& kp,
-            const std::vector<float>& kd
+            const std::vector<float>& kd,
+            const std::vector<float>& ki
         );
 
         // ========== Audio capabilities ==========
@@ -160,6 +166,10 @@ namespace unitree_interface {
 
         const std::uint8_t mode_pr_{0}; // Always use PR mode (command joint angles)
         std::uint8_t mode_machine_{0};
+
+        std::array<float, joints::num_joints> actual_position_{};
+        std::array<float, joints::num_joints> integral_error_{};
+        std::chrono::steady_clock::time_point last_cmd_time_{};
 
         unitree::robot::ChannelPublisherPtr<LowCmd> arm_sdk_pub_;
         unitree::robot::ChannelPublisherPtr<LowCmd> low_cmd_pub_;

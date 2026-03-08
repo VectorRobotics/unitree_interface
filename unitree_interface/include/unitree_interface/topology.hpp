@@ -241,20 +241,24 @@ namespace unitree_interface::joints {
     }
 
     // ========== Conversion ==========
-    inline std::tuple<
+    inline
+    std::tuple<
         std::vector<std::uint8_t>,
         std::vector<float>,
         std::vector<float>,
         std::vector<float>,
         std::vector<float>,
+        std::vector<float>,
         std::vector<float>
-    > resolve_joint_commands(
+    >
+    resolve_joint_commands(
         const std::vector<std::string>& names,
         const std::vector<double>& position,
         const std::vector<double>& velocity,
         const std::vector<double>& effort,
         const std::array<float, num_joints>& profile_kp,
-        const std::array<float, num_joints>& profile_kd
+        const std::array<float, num_joints>& profile_kd,
+        const std::array<float, num_joints>& profile_ki
     ) {
         const std::size_t n = names.size();
 
@@ -264,6 +268,7 @@ namespace unitree_interface::joints {
         std::vector<float> eff{};
         std::vector<float> kp{};
         std::vector<float> kd{};
+        std::vector<float> ki{};
 
         indices.reserve(n);
         pos.reserve(n);
@@ -271,6 +276,7 @@ namespace unitree_interface::joints {
         eff.reserve(n);
         kp.reserve(n);
         kd.reserve(n);
+        ki.reserve(n);
 
         for (std::size_t i = 0; i < n; ++i) {
             auto joint_index = from_name(names[i]);
@@ -291,9 +297,10 @@ namespace unitree_interface::joints {
 
             kp.push_back(profile_kp[index]);
             kd.push_back(profile_kd[index]);
+            ki.push_back(profile_ki[index]);
         }
 
-        return {indices, pos, vel, eff, kp, kd};
+        return {indices, pos, vel, eff, kp, kd, ki};
     }
 
 } // namespace unitree_interface::joints

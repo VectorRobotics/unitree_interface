@@ -13,6 +13,7 @@ ROS 2 interface for the Unitree G1 humanoid robot (29 DoF). Bridges the Unitree 
 | `~/change_mode` | `unitree_interface_msgs/srv/ChangeControlMode` | Request a control mode transition. See `ControlMode.msg` for valid mode IDs. |
 | `~/ready_locomotion` | `std_srvs/srv/Trigger` | Runs the locomotion ready sequence (damp, stand up, start). Blocking, retryable on failure. |
 | `~/release_arms` | `std_srvs/srv/Trigger` | Ramps down the arm SDK weight from 1.0 to 0.0, handing upper-body control back to the locomotion controller. Blocking (~5s by default). |
+| `~/reset_integral_error` | `std_srvs/srv/Trigger` | Zeros out accumulated integral error for all joints and resets the integral timer. |
 | `~/set_profile` | `unitree_interface_msgs/srv/SetProfile` | Switch the active gain profile. See `Profile.msg` for valid profile IDs. |
 
 ## Published Topics
@@ -48,6 +49,7 @@ See [`control_modes.md`](unitree_interface/docs/control_modes.md).
 | `mode_change_service_name` | string | `"~/change_mode"` | Service name for mode changes. |
 | `ready_locomotion_service_name` | string | `"~/ready_locomotion"` | Service name for the locomotion ready sequence. |
 | `release_arms_service_name` | string | `"~/release_arms"` | Service name for releasing arm SDK control. |
+| `reset_integral_error_service_name` | string | `"~/reset_integral_error"` | Service name for resetting integral error. |
 | `set_profile_service_name` | string | `"~/set_profile"` | Service name for switching gain profiles. |
 | `release_arms_steps` | int | `250` | Number of weight ramp-down steps for arm release. |
 | `release_arms_interval_ms` | int | `20` | Delay (ms) between each ramp-down step. Total duration = steps × interval. |
@@ -110,7 +112,13 @@ string message
 
 ## Gain Profiles
 
-Each profile defines per-joint kp/kd gains for all 29 joints. The active profile is selected via `~/set_profile` and determines the motor gains used by `~/cmd_arm` and `~/cmd_low`. See [`profiles.hpp`](unitree_interface/include/unitree_interface/profiles.hpp) for definitions.
+Each profile defines per-joint kp, kd, and ki gains for all 29 joints. The active profile is selected via `~/set_profile` and determines the motor gains used by `~/cmd_arm` and `~/cmd_low`. See [`profiles.hpp`](unitree_interface/include/unitree_interface/profiles.hpp) for definitions.
+
+### Integral control
+
+The Unitree SDK's on-board motor controller implements PD control: `torque = kp*(q_desired - q_actual) + kd*(dq_desired - dq_actual) + tau`. There is no native ki field. Integral control is computed application-side: the position error is accumulated over time and `ki * integral_error` is added to the effort (tau) field before sending commands to the robot.
+
+Integral error is automatically reset on mode changes and profile switches. It can also be manually reset via the `~/reset_integral_error` service.
 
 ## Usage Examples
 
@@ -136,6 +144,12 @@ Release arm SDK control back to the locomotion controller:
 
 ```bash
 ros2 service call /unitree_interface/release_arms std_srvs/srv/Trigger "{}"
+```
+
+Reset integral error:
+
+```bash
+ros2 service call /unitree_interface/reset_integral_error std_srvs/srv/Trigger "{}"
 ```
 
 Switch to the VisualServo gain profile:

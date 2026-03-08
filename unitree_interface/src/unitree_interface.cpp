@@ -38,6 +38,7 @@ namespace unitree_interface {
         declare_parameter("mode_change_service_name", "~/change_mode");
         declare_parameter("ready_locomotion_service_name", "~/ready_locomotion");
         declare_parameter("release_arms_service_name", "~/release_arms");
+        declare_parameter("reset_integral_error_service_name", "~/reset_integral_error");
         declare_parameter("set_profile_service_name", "~/set_profile");
         declare_parameter("current_mode_topic", "~/current_mode");
         declare_parameter("current_profile_topic", "~/current_profile");
@@ -54,6 +55,7 @@ namespace unitree_interface {
         mode_change_service_name_ = get_parameter("mode_change_service_name").as_string();
         ready_locomotion_service_name_ = get_parameter("ready_locomotion_service_name").as_string();
         release_arms_service_name_ = get_parameter("release_arms_service_name").as_string();
+        reset_integral_error_service_name_ = get_parameter("reset_integral_error_service_name").as_string();
         set_profile_service_name_ = get_parameter("set_profile_service_name").as_string();
         current_mode_topic_ = get_parameter("current_mode_topic").as_string();
         current_profile_topic_ = get_parameter("current_profile_topic").as_string();
@@ -152,6 +154,16 @@ namespace unitree_interface {
                 std_srvs::srv::Trigger::Response::SharedPtr response
             ) {
                 handle_release_arms_request(request, response); // NOLINT
+            }
+        );
+
+        reset_integral_error_service_ = create_service<std_srvs::srv::Trigger>(
+            reset_integral_error_service_name_,
+            [this](
+                const std_srvs::srv::Trigger::Request::SharedPtr request, // NOLINT
+                std_srvs::srv::Trigger::Response::SharedPtr response
+            ) {
+                handle_reset_integral_error_request(request, response); // NOLINT
             }
         );
 
@@ -295,6 +307,7 @@ namespace unitree_interface {
         if (success) {
             RCLCPP_INFO(logger_, "Mode transition successful");
 
+            sdk_wrapper_->reset_integral_error();
             setup_mode_dependent_subscriptions();
             publish_current_mode();
 
@@ -398,6 +411,7 @@ namespace unitree_interface {
                 return;
         }
 
+        sdk_wrapper_->reset_integral_error();
         publish_current_profile();
 
         response->success = true;
@@ -411,6 +425,15 @@ namespace unitree_interface {
         );
 
         RCLCPP_INFO(logger_, "%s", response->message.c_str());
+    }
+
+    void UnitreeInterface::handle_reset_integral_error_request(
+        const std_srvs::srv::Trigger::Request::SharedPtr, // NOLINT
+        std_srvs::srv::Trigger::Response::SharedPtr response // NOLINT
+    ) {
+        sdk_wrapper_->reset_integral_error();
+        response->success = true;
+        response->message = "Integral error reset";
     }
 
     void UnitreeInterface::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr message) { // NOLINT
@@ -442,16 +465,17 @@ namespace unitree_interface {
         }
 
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
-            const auto [profile_kp, profile_kd] = get_profile_gains(current_profile_);
+            const auto [profile_kp, profile_kd, profile_ki] = get_profile_gains(current_profile_);
 
-            auto [indices, position, velocity, effort, kp, kd] =
+            auto [indices, position, velocity, effort, kp, kd, ki] =
                 joints::resolve_joint_commands(
                     message->name,
                     message->position,
                     message->velocity,
                     message->effort,
                     profile_kp,
-                    profile_kd
+                    profile_kd,
+                    profile_ki
                 );
 
             for (std::size_t i = 0; i < indices.size(); ++i) {
@@ -463,6 +487,7 @@ namespace unitree_interface {
                     effort[i] = 0.0F;
                     kp[i] = 0.0F;
                     kd[i] = 0.0F;
+                    ki[i] = 0.0F;
                 }
             }
 
@@ -472,7 +497,8 @@ namespace unitree_interface {
                 velocity,
                 effort,
                 kp,
-                kd
+                kd,
+                ki
             );
         } else {
             RCLCPP_WARN_THROTTLE(
@@ -487,16 +513,17 @@ namespace unitree_interface {
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     void UnitreeInterface::cmd_low_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
         if (std::holds_alternative<LowLevelMode>(current_mode_)) {
-            const auto [profile_kp, profile_kd] = get_profile_gains(current_profile_);
+            const auto [profile_kp, profile_kd, profile_ki] = get_profile_gains(current_profile_);
 
-            auto [indices, position, velocity, effort, kp, kd] =
+            auto [indices, position, velocity, effort, kp, kd, ki] =
                 joints::resolve_joint_commands(
                     message->name,
                     message->position,
                     message->velocity,
                     message->effort,
                     profile_kp,
-                    profile_kd
+                    profile_kd,
+                    profile_ki
                 );
 
             sdk_wrapper_->send_low_commands(
@@ -505,7 +532,8 @@ namespace unitree_interface {
                 velocity,
                 effort,
                 kp,
-                kd
+                kd,
+                ki
             );
         } else {
             RCLCPP_WARN_THROTTLE(

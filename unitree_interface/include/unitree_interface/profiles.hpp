@@ -5,6 +5,9 @@
 #include "unitree_interface/topology.hpp"
 #include "unitree_interface_msgs/msg/profile.hpp"
 
+#include <array>
+#include <tuple>
+#include <type_traits>
 #include <variant>
 
 namespace unitree_interface {
@@ -100,6 +103,8 @@ namespace unitree_interface {
             2.0F,
             2.0F,
         };
+
+        static constexpr std::array<float, joints::num_joints> ki {};
     };
 
     template <>
@@ -154,6 +159,8 @@ namespace unitree_interface {
             8.0F,
             8.0F,
         };
+
+        static constexpr std::array<float, joints::num_joints> ki {};
     };
 
     template <>
@@ -169,6 +176,47 @@ namespace unitree_interface {
         static constexpr std::array<float, joints::num_joints> kp = Default::kp;
 
         static constexpr std::array<float, joints::num_joints> kd = Default::kd;
+
+        static constexpr std::array<float, joints::num_joints> ki {
+            // Left leg
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+
+            // Right leg
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+
+            // Waist
+            0.05F,
+            0.05F,
+            0.05F,
+
+            // Left arm
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+
+            // Right arm
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+            0.05F,
+        };
     };
 
     template <>
@@ -184,6 +232,8 @@ namespace unitree_interface {
         static constexpr std::array<float, joints::num_joints> kp = Default::kp;
 
         static constexpr std::array<float, joints::num_joints> kd = Default::kd;
+
+        static constexpr std::array<float, joints::num_joints> ki = Default::ki;
     };
 
     template <>
@@ -198,6 +248,8 @@ namespace unitree_interface {
         static constexpr std::array<float, joints::num_joints> kp {};
 
         static constexpr std::array<float, joints::num_joints> kd {};
+
+        static constexpr std::array<float, joints::num_joints> ki {};
     };
 
     template <>
@@ -217,15 +269,22 @@ namespace unitree_interface {
     >;
     // clang-format on
 
-    using GainArrays = std::pair<
+    inline
+    std::tuple<
+        const std::array<float, joints::num_joints>&,
         const std::array<float, joints::num_joints>&,
         const std::array<float, joints::num_joints>&
-    >;
-
-    inline GainArrays get_profile_gains(const Profile& profile) {
+    >
+    get_profile_gains(const Profile& profile) {
         return std::visit(
-            [](const auto& p) -> GainArrays {
-                return {p.kp, p.kd};
+            [](const auto& p) {
+                using ProfileType = std::decay_t<decltype(p)>;
+
+                return std::make_tuple(
+                    ProfileType::kp,
+                    ProfileType::kd,
+                    ProfileType::ki
+                );
             },
             profile
         );

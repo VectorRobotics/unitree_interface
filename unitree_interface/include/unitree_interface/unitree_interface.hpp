@@ -63,6 +63,11 @@ namespace unitree_interface {
             unitree_interface_msgs::srv::SetProfile::Response::SharedPtr response
         );
 
+        void handle_reset_integral_error_request(
+            std_srvs::srv::Trigger::Request::SharedPtr request,
+            std_srvs::srv::Trigger::Response::SharedPtr response
+        );
+
         void cmd_vel_callback(geometry_msgs::msg::Twist::SharedPtr message);
 
         void cmd_arm_callback(sensor_msgs::msg::JointState::SharedPtr message);
@@ -89,6 +94,7 @@ namespace unitree_interface {
         std::string mode_change_service_name_;
         std::string ready_locomotion_service_name_;
         std::string release_arms_service_name_;
+        std::string reset_integral_error_service_name_;
         std::string set_profile_service_name_;
         std::string current_mode_topic_;
         std::string current_profile_topic_;
@@ -106,6 +112,7 @@ namespace unitree_interface {
         rclcpp::Service<unitree_interface_msgs::srv::ChangeControlMode>::SharedPtr mode_change_service_;
         rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr ready_locomotion_service_;
         rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr release_arms_service_;
+        rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_integral_error_service_;
         rclcpp::Service<unitree_interface_msgs::srv::SetProfile>::SharedPtr set_profile_service_;
 
         rclcpp::Publisher<unitree_interface_msgs::msg::ControlMode>::SharedPtr current_mode_pub_;

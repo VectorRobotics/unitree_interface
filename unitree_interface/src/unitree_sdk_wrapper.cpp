@@ -2,6 +2,7 @@
 #include "unitree_interface/topology.hpp"
 #include "unitree_interface/crc.hpp"
 
+#include <chrono>
 #include <unitree/robot/channel/channel_factory.hpp>
 #include <unitree/robot/channel/channel_publisher.hpp>
 #include <unitree/robot/channel/channel_subscriber.hpp>
@@ -352,24 +353,46 @@ namespace unitree_interface {
         const std::vector<float>& velocity,
         const std::vector<float>& effort,
         const std::vector<float>& kp,
-        const std::vector<float>& kd
+        const std::vector<float>& kd,
+        const std::vector<float>& ki
     ) {
         if (!initialized_ || !arm_sdk_pub_) {
             RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
             return;
         }
 
+        const auto now = std::chrono::steady_clock::now();
+        const float delta_time = (
+            (last_cmd_time_ == std::chrono::steady_clock::time_point{})
+            ? 0.0F
+            : std::chrono::duration<float>(now - last_cmd_time_).count()
+        );
+
+        std::vector<float> adjusted_effort;
+        adjusted_effort.reserve(effort.size());
+
+        for (std::size_t i = 0; i < indices.size(); ++i) {
+            const auto joint_index = indices[i];
+
+            const auto error = position[i] - actual_position_[joint_index];
+            integral_error_[joint_index] += error * delta_time;
+
+            adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index]);
+        }
+
         auto command = construct_low_cmd(
             indices,
             position,
             velocity,
-            effort,
+            adjusted_effort,
             kp,
             kd,
             1.0F
         );
 
         arm_sdk_pub_->Write(command);
+
+        last_cmd_time_ = now;
     }
 
     void UnitreeSDKWrapper::send_low_commands(
@@ -378,23 +401,45 @@ namespace unitree_interface {
         const std::vector<float>& velocity,
         const std::vector<float>& effort,
         const std::vector<float>& kp,
-        const std::vector<float>& kd
+        const std::vector<float>& kd,
+        const std::vector<float>& ki
     ) {
         if (!initialized_ || !low_cmd_pub_) {
             RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
             return;
         }
 
+        const auto now = std::chrono::steady_clock::now();
+        const float delta_time = (
+            (last_cmd_time_ == std::chrono::steady_clock::time_point{})
+            ? 0.0F
+            : std::chrono::duration<float>(now - last_cmd_time_).count()
+        );
+
+        std::vector<float> adjusted_effort;
+        adjusted_effort.reserve(effort.size());
+
+        for (std::size_t i = 0; i < indices.size(); ++i) {
+            const auto joint_index = indices[i];
+
+            const auto error = position[i] - actual_position_[joint_index];
+            integral_error_[joint_index] += error * delta_time;
+
+            adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index]);
+        }
+
         auto command = construct_low_cmd(
             indices,
             position,
             velocity,
-            effort,
+            adjusted_effort,
             kp,
             kd
         );
 
         low_cmd_pub_->Write(command);
+
+        last_cmd_time_ = now;
     }
 
     // ========== Audio capabilities ==========
@@ -444,12 +489,22 @@ namespace unitree_interface {
         joint_states_pub_ = std::move(publisher);
     }
 
+    void UnitreeSDKWrapper::reset_integral_error() {
+        integral_error_.fill(0.0F);
+        last_cmd_time_ = {};
+        RCLCPP_INFO(logger_, "Integral error reset");
+    }
+
     // ========== Callbacks ==========
     void UnitreeSDKWrapper::low_state_callback(const void* message) {
         const auto& state = *static_cast<const LowState*>(message);
 
         if (mode_machine_ != state.mode_machine()) {
             mode_machine_ = state.mode_machine();
+        }
+
+        for (std::size_t i = 0; i < joints::num_joints; ++i) {
+            actual_position_[i] = state.motor_state()[i].q();
         }
 
         if (joint_states_pub_) {
