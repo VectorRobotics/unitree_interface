@@ -2,7 +2,6 @@
 #include "unitree_interface/topology.hpp"
 #include "unitree_interface/crc.hpp"
 
-#include <chrono>
 #include <unitree/robot/channel/channel_factory.hpp>
 #include <unitree/robot/channel/channel_publisher.hpp>
 #include <unitree/robot/channel/channel_subscriber.hpp>
@@ -361,13 +360,6 @@ namespace unitree_interface {
             return;
         }
 
-        const auto now = std::chrono::steady_clock::now();
-        const float delta_time = (
-            (last_cmd_time_ == std::chrono::steady_clock::time_point{})
-            ? 0.0F
-            : std::chrono::duration<float>(now - last_cmd_time_).count()
-        );
-
         std::vector<float> adjusted_effort;
         adjusted_effort.reserve(effort.size());
 
@@ -375,7 +367,7 @@ namespace unitree_interface {
             const auto joint_index = indices[i];
 
             const auto error = position[i] - actual_position_[joint_index];
-            integral_error_[joint_index] += error * delta_time;
+            integral_error_[joint_index] += error;
 
             adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index]);
         }
@@ -391,8 +383,6 @@ namespace unitree_interface {
         );
 
         arm_sdk_pub_->Write(command);
-
-        last_cmd_time_ = now;
     }
 
     void UnitreeSDKWrapper::send_low_commands(
@@ -409,13 +399,6 @@ namespace unitree_interface {
             return;
         }
 
-        const auto now = std::chrono::steady_clock::now();
-        const float delta_time = (
-            (last_cmd_time_ == std::chrono::steady_clock::time_point{})
-            ? 0.0F
-            : std::chrono::duration<float>(now - last_cmd_time_).count()
-        );
-
         std::vector<float> adjusted_effort;
         adjusted_effort.reserve(effort.size());
 
@@ -423,7 +406,7 @@ namespace unitree_interface {
             const auto joint_index = indices[i];
 
             const auto error = position[i] - actual_position_[joint_index];
-            integral_error_[joint_index] += error * delta_time;
+            integral_error_[joint_index] += error;
 
             adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index]);
         }
@@ -438,8 +421,6 @@ namespace unitree_interface {
         );
 
         low_cmd_pub_->Write(command);
-
-        last_cmd_time_ = now;
     }
 
     // ========== Audio capabilities ==========
@@ -491,7 +472,6 @@ namespace unitree_interface {
 
     void UnitreeSDKWrapper::reset_integral_error() {
         integral_error_.fill(0.0F);
-        last_cmd_time_ = {};
         RCLCPP_INFO(logger_, "Integral error reset");
     }
 

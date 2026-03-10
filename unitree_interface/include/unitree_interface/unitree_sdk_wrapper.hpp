@@ -14,7 +14,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <chrono>
 
 // ========== Forward declarations ==========
 namespace rclcpp {
@@ -169,7 +168,6 @@ namespace unitree_interface {
 
         std::array<float, joints::num_joints> actual_position_{};
         std::array<float, joints::num_joints> integral_error_{};
-        std::chrono::steady_clock::time_point last_cmd_time_{};
 
         unitree::robot::ChannelPublisherPtr<LowCmd> arm_sdk_pub_;
         unitree::robot::ChannelPublisherPtr<LowCmd> low_cmd_pub_;
