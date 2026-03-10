@@ -200,19 +200,19 @@ namespace unitree_interface {
             0.05F,
 
             // Left arm
-            0.05F,
-            0.05F,
-            0.05F,
-            0.05F,
+            0.1F,
+            0.1F,
+            0.1F,
+            0.1F,
             0.05F,
             0.05F,
             0.05F,
 
             // Right arm
-            0.05F,
-            0.05F,
-            0.05F,
-            0.05F,
+            0.1F,
+            0.1F,
+            0.1F,
+            0.1F,
             0.05F,
             0.05F,
             0.05F,
@@ -280,7 +280,7 @@ namespace unitree_interface {
             [](const auto& p) {
                 using ProfileType = std::decay_t<decltype(p)>;
 
-                return std::make_tuple(
+                return std::tie(
                     ProfileType::kp,
                     ProfileType::kd,
                     ProfileType::ki

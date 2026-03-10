@@ -360,13 +360,19 @@ namespace unitree_interface {
             return;
         }
 
+        std::array<float, joints::num_joints> actual_pos;
+        {
+            std::lock_guard lock(position_mutex_);
+            actual_pos = actual_position_;
+        }
+
         std::vector<float> adjusted_effort;
         adjusted_effort.reserve(effort.size());
 
         for (std::size_t i = 0; i < indices.size(); ++i) {
             const auto joint_index = indices[i];
 
-            const auto error = position[i] - actual_position_[joint_index];
+            const auto error = position[i] - actual_pos[joint_index];
             integral_error_[joint_index] += error;
 
             adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index]);
@@ -399,13 +405,19 @@ namespace unitree_interface {
             return;
         }
 
+        std::array<float, joints::num_joints> actual_pos;
+        {
+            std::lock_guard lock(position_mutex_);
+            actual_pos = actual_position_;
+        }
+
         std::vector<float> adjusted_effort;
         adjusted_effort.reserve(effort.size());
 
         for (std::size_t i = 0; i < indices.size(); ++i) {
             const auto joint_index = indices[i];
 
-            const auto error = position[i] - actual_position_[joint_index];
+            const auto error = position[i] - actual_pos[joint_index];
             integral_error_[joint_index] += error;
 
             adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index]);
@@ -483,8 +495,11 @@ namespace unitree_interface {
             mode_machine_ = state.mode_machine();
         }
 
-        for (std::size_t i = 0; i < joints::num_joints; ++i) {
-            actual_position_[i] = state.motor_state()[i].q();
+        {
+            std::lock_guard lock(position_mutex_);
+            for (std::size_t i = 0; i < joints::num_joints; ++i) {
+                actual_position_[i] = state.motor_state()[i].q();
+            }
         }
 
         if (joint_states_pub_) {
