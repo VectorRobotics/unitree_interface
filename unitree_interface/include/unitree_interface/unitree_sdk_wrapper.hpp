@@ -10,7 +10,10 @@
 #include <rclcpp/publisher.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 
+#include "unitree_interface/topology.hpp"
+
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -160,6 +163,9 @@ namespace unitree_interface {
 
         const std::uint8_t mode_pr_{0}; // Always use PR mode (command joint angles)
         std::uint8_t mode_machine_{0};
+
+        mutable std::mutex position_mutex_;
+        std::array<float, joints::num_joints> actual_position_{};
 
         unitree::robot::ChannelPublisherPtr<LowCmd> arm_sdk_pub_;
         unitree::robot::ChannelPublisherPtr<LowCmd> low_cmd_pub_;
