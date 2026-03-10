@@ -2,6 +2,7 @@
 #define VECTOR_UNITREE_SDK_WRAPPER_HPP
 
 #include "unitree_interface/topology.hpp"
+
 #include <unitree/robot/channel/channel_publisher.hpp>
 #include <unitree/robot/channel/channel_subscriber.hpp>
 #include <unitree/idl/hg/LowCmd_.hpp>

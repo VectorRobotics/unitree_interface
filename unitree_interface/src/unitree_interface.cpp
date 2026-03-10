@@ -424,6 +424,8 @@ namespace unitree_interface {
             current_profile_
         );
 
+        sdk_wrapper_->send_speech_command(response->message);
+
         RCLCPP_INFO(logger_, "%s", response->message.c_str());
     }
 

@@ -1,4 +1,5 @@
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
+#include "unitree_interface/profiles.hpp"
 #include "unitree_interface/topology.hpp"
 #include "unitree_interface/crc.hpp"
 
@@ -283,18 +284,35 @@ namespace unitree_interface {
         const float weight_per_step = 1.0F / static_cast<float>(steps);
         const auto interval = std::chrono::milliseconds(interval_ms);
 
-        const std::vector<std::uint8_t> empty_indices{};
-        const std::vector<float> empty{};
+        std::vector<std::uint8_t> hold_indices;
+        std::vector<float> hold_position;
+        std::vector<float> hold_velocity;
+        std::vector<float> hold_effort;
+        std::vector<float> hold_kp;
+        std::vector<float> hold_kd;
+
+        {
+            std::lock_guard lock(position_mutex_);
+            for (const auto& joint : joints::upper_body) {
+                const auto index = static_cast<std::uint8_t>(joint);
+                hold_indices.push_back(index);
+                hold_position.push_back(actual_position_[index]);
+                hold_velocity.push_back(0.0F);
+                hold_effort.push_back(0.0F);
+                hold_kp.push_back(Default::kp[index]);
+                hold_kd.push_back(Default::kd[index]);
+            }
+        }
 
         for (int i = 0; i <= steps; ++i) {
             const float weight = 1.0F - (static_cast<float>(i) * weight_per_step);
             auto command = construct_low_cmd(
-                empty_indices,
-                empty,
-                empty,
-                empty,
-                empty,
-                empty,
+                hold_indices,
+                hold_position,
+                hold_velocity,
+                hold_effort,
+                hold_kp,
+                hold_kd,
                 weight
             );
 

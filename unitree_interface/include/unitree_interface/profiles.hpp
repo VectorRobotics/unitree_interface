@@ -269,15 +269,15 @@ namespace unitree_interface {
     >;
     // clang-format on
 
-    inline
-    std::tuple<
+    using GainArrays = std::tuple<
         const std::array<float, joints::num_joints>&,
         const std::array<float, joints::num_joints>&,
         const std::array<float, joints::num_joints>&
-    >
-    get_profile_gains(const Profile& profile) {
+    >;
+
+    inline GainArrays get_profile_gains(const Profile& profile) {
         return std::visit(
-            [](const auto& p) {
+            [](const auto& p) -> GainArrays {
                 using ProfileType = std::decay_t<decltype(p)>;
 
                 return std::tie(
