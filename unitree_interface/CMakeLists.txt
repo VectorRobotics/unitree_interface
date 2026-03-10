@@ -69,7 +69,16 @@ target_link_libraries(unitree_interface_node
   unitree_interface_lib
 )
 
-install(TARGETS unitree_interface_node
+# Test node: publishes zero commands to all upper body joints
+add_executable(zero_cmd_node
+  src/zero_cmd_node.cpp
+)
+
+target_link_libraries(zero_cmd_node
+  unitree_interface_lib
+)
+
+install(TARGETS unitree_interface_node zero_cmd_node
   DESTINATION lib/unitree_interface
 )
 
