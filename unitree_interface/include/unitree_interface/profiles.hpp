@@ -217,7 +217,7 @@ namespace unitree_interface {
     >;
     // clang-format on
 
-    using GainArrays = std::pair<
+    using GainArrays = std::tuple<
         const std::array<float, joints::num_joints>&,
         const std::array<float, joints::num_joints>&
     >;
@@ -225,7 +225,7 @@ namespace unitree_interface {
     inline GainArrays get_profile_gains(const Profile& profile) {
         return std::visit(
             [](const auto& p) -> GainArrays {
-                return {p.kp, p.kd};
+                return std::tie(p.kp, p.kd);
             },
             profile
         );
