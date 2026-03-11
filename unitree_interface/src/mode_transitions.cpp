@@ -28,7 +28,7 @@ namespace unitree_interface {
         the emergency stop procedure.
         */
 
-        const bool damp_success = sdk_wrapper.damp();
+        const bool damp_success = sdk_wrapper.damp_high();
 
         if (!damp_success) {
             RCLCPP_ERROR(
@@ -62,31 +62,17 @@ namespace unitree_interface {
 #endif
 
     ControlMode Transition<IdleMode, EmergencyMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
-        /*
-        Our modes don't truly reflect unitree's internal controller state. We can land up in
-        a situation wherein we transition from LowLevelMode to IdleMode and attempt to transition
-        to EmergencyMode. No longer knowing whether the internal controller itself is in "high-level"
-        or "low-level" mode, if we erroneously attempt to enter damping mode without high-level
-        control services active, we could possible land up in a dangerous situation.
-        */
-
-        if (!sdk_wrapper.has_active_mode()) {
-            // Not in high-level mode - attempt to transition
-            auto possible_high_level_mode = Transition<IdleMode, HighLevelMode>::execute(sdk_wrapper);
-
-            if (!std::holds_alternative<HighLevelMode>(possible_high_level_mode)) {
-                return IdleMode{};
+        if (sdk_wrapper.has_active_mode()) {
+            if (!sdk_wrapper.damp_high()) {
+                RCLCPP_ERROR(
+                    sdk_wrapper.get_logger(),
+                    "Call to damp_high failed during %s to Emergency transition. "
+                    "The system will be left in emergency mode. Repeated calls to damp(estop) may be required",
+                    ControlModeTraits<IdleMode>::name()
+                );
             }
-        }
-
-        // At this point, we should have high-level services active
-        if (!sdk_wrapper.damp()) {
-            RCLCPP_ERROR(
-                sdk_wrapper.get_logger(),
-                "Call to damp failed during %s to Emergency transition. "
-                "The system will be left in emergency mode. Repeated calls to damp(estop) may be required",
-                ControlModeTraits<IdleMode>::name()
-            );
+        } else {
+            sdk_wrapper.damp_low();
         }
 
         return EmergencyMode{};
@@ -108,7 +94,7 @@ namespace unitree_interface {
 #endif
 
     ControlMode Transition<HighLevelMode, EmergencyMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
-        if (sdk_wrapper.damp()) {
+        if (sdk_wrapper.damp_high()) {
             return EmergencyMode{};
         }
 
@@ -130,30 +116,7 @@ namespace unitree_interface {
     }
 
     ControlMode Transition<LowLevelMode, EmergencyMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
-        auto possible_high_level_mode = Transition<LowLevelMode, HighLevelMode>::execute(sdk_wrapper);
-
-        if (!std::holds_alternative<HighLevelMode>(possible_high_level_mode)) {
-            return LowLevelMode{};
-        }
-
-        if (sdk_wrapper.damp()) {
-            return EmergencyMode{};
-        }
-
-        // The internal controller should be high-level at this point, so we need to rollback to low-level
-        auto possible_low_level_mode = Transition<HighLevelMode, LowLevelMode>::execute(sdk_wrapper);
-
-        if (std::holds_alternative<LowLevelMode>(possible_low_level_mode)) {
-            return EmergencyMode{};
-        }
-
-        // damp() failed, and we also failed to transition back to low-level
-        RCLCPP_ERROR(
-            sdk_wrapper.get_logger(),
-            "Call to damp failed during %s to Emergency transition. "
-            "The system will be left in emergency mode. Repeated calls to damp(estop) may be required",
-            ControlModeTraits<LowLevelMode>::name()
-        );
+        sdk_wrapper.damp_low();
 
         return EmergencyMode{};
     }

@@ -316,7 +316,7 @@ namespace unitree_interface {
             const std::int64_t stand_up_delay = get_parameter("ready_locomotion_stand_up_delay").as_int();
             const std::int64_t start_delay = get_parameter("ready_locomotion_start_delay").as_int();
 
-            if (!sdk_wrapper_->damp()) {
+            if (!sdk_wrapper_->damp_high()) {
                 response->success = false;
                 response->message = "damp() failed";
                 return;

@@ -204,22 +204,59 @@ namespace unitree_interface {
         return false;
     }
 
-    bool UnitreeSDKWrapper::damp() {
+    bool UnitreeSDKWrapper::damp_high() {
         if (!initialized_ || !loco_client_) {
             RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
             return false;
         }
 
-        RCLCPP_INFO(logger_, "Entering damp mode");
+        RCLCPP_INFO(logger_, "Entering high-level damp mode");
         const std::int32_t ret = loco_client_->Damp();
 
         if (ret == 0) {
-            RCLCPP_INFO(logger_, "Damp mode activated");
+            RCLCPP_INFO(logger_, "High-level damp mode activated");
             return true;
         }
 
         RCLCPP_WARN(logger_, "Damp failed with error code: %d", ret);
         return false;
+    }
+
+    void UnitreeSDKWrapper::damp_low() {
+        if (!initialized_ || !low_cmd_pub_) {
+            RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
+            return;
+        }
+
+        std::vector<std::uint8_t> indices;
+        std::vector<float> position;
+        std::vector<float> velocity;
+        std::vector<float> effort;
+        std::vector<float> kp;
+        std::vector<float> kd;
+
+        for (const auto& joint : joints::all_joints) {
+            const auto idx = static_cast<std::uint8_t>(joint);
+            indices.push_back(idx);
+            position.push_back(0.0F);
+            velocity.push_back(0.0F);
+            effort.push_back(0.0F);
+            kp.push_back(Damp::kp[idx]);
+            kd.push_back(Damp::kd[idx]);
+        }
+
+        auto command = construct_low_cmd(
+            indices,
+            position,
+            velocity,
+            effort,
+            kp,
+            kd
+        );
+
+        low_cmd_pub_->Write(command);
+
+        RCLCPP_INFO(logger_, "Low-level damp command sent");
     }
 
     bool UnitreeSDKWrapper::stand_up() {
