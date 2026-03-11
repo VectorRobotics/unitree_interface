@@ -236,13 +236,13 @@ namespace unitree_interface {
         std::vector<float> kd;
 
         for (const auto& joint : joints::all_joints) {
-            const auto idx = static_cast<std::uint8_t>(joint);
-            indices.push_back(idx);
+            const auto index = static_cast<std::uint8_t>(joint);
+            indices.push_back(index);
             position.push_back(0.0F);
             velocity.push_back(0.0F);
             effort.push_back(0.0F);
-            kp.push_back(Damp::kp[idx]);
-            kd.push_back(Damp::kd[idx]);
+            kp.push_back(Damp::kp[index]);
+            kd.push_back(Damp::kd[index]);
         }
 
         auto command = construct_low_cmd(
