@@ -87,7 +87,7 @@ namespace unitree_interface {
             float vyaw
         );
 
-        bool damp();
+        bool damp_high();
 
         bool stand_up();
 
@@ -107,6 +107,8 @@ namespace unitree_interface {
         void release_arms(int steps, int interval_ms);
 
         // ========== Low-level capabilities ==========
+        void damp_low();
+
         void send_low_commands(
             const std::vector<std::uint8_t>& indices,
             const std::vector<float>& position,

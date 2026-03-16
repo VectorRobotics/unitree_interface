@@ -352,7 +352,7 @@ namespace unitree_interface {
             const auto stand_up_delay = params_.get_int("ready_locomotion_stand_up_delay");
             const auto start_delay = params_.get_int("ready_locomotion_start_delay");
 
-            if (!sdk_wrapper_->damp()) {
+            if (!sdk_wrapper_->damp_high()) {
                 response->success = false;
                 response->message = "damp() failed";
                 return;
