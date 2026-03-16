@@ -13,61 +13,94 @@
 #include <chrono>
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 #include <thread>
-#include <tuple>
-#include <type_traits>
-#include <variant>
 
 namespace unitree_interface {
+
+    template <typename ProfileType>
+    static void declare_profile_gains(
+        dynamic_params::DynamicParams& params,
+        const bool dynamic = true
+    ) {
+        using dynamic_params::FloatRange;
+
+        const std::string prefix = std::string(ProfileTraits<ProfileType>::name()) + "/";
+
+        for (std::size_t i = 0; i < joints::num_joints; ++i) {
+            params.declare(
+                prefix + "kp/" + joints::joint_names[i],
+                static_cast<double>(ProfileType::kp[i]),
+                FloatRange{0.0, 200.0},
+                "",
+                dynamic
+            );
+
+            params.declare(
+                prefix + "kd/" + joints::joint_names[i],
+                static_cast<double>(ProfileType::kd[i]),
+                FloatRange{0.0, 50.0},
+                "",
+                dynamic
+            );
+
+            params.declare(
+                prefix + "ki/" + joints::joint_names[i],
+                static_cast<double>(ProfileType::ki[i]),
+                FloatRange{0.0, 12.0},
+                "",
+                dynamic
+            );
+        }
+    }
 
     UnitreeInterface::UnitreeInterface(const rclcpp::NodeOptions& options)
         : Node("unitree_interface", options),
           logger_(get_logger()),
+          params_(this),
           current_mode_(std::monostate{}),
           current_profile_(Default{}) {
-        // ========== Parameters ==========
-        declare_parameter("motion_switcher_client_timeout", 5.0F); // NOLINT
-        declare_parameter("loco_client_timeout", 10.0F); // NOLINT
-        declare_parameter("audio_client_timeout", 5.0F); // NOLINT
-        declare_parameter("volume", 100); // NOLINT
-        declare_parameter("ready_locomotion_stand_up_delay", 5); // NOLINT
-        declare_parameter("ready_locomotion_start_delay", 10); // NOLINT
-        declare_parameter("release_arms_steps", 250); // NOLINT
-        declare_parameter("release_arms_interval_ms", 20); // NOLINT
+        using dynamic_params::FloatRange;
+        using dynamic_params::IntRange;
 
-        declare_parameter("mode_change_service_name", "~/change_mode");
-        declare_parameter("ready_locomotion_service_name", "~/ready_locomotion");
-        declare_parameter("release_arms_service_name", "~/release_arms");
-        declare_parameter("reset_integral_error_service_name", "~/reset_integral_error");
-        declare_parameter("set_profile_service_name", "~/set_profile");
-        declare_parameter("current_mode_topic", "~/current_mode");
-        declare_parameter("current_profile_topic", "~/current_profile");
-        declare_parameter("cmd_vel_topic", "~/cmd_vel");
-        declare_parameter("cmd_arm_topic", "~/cmd_arm");
-        declare_parameter("joint_states_topic", "~/joint_states");
-        declare_parameter("tts_topic", "~/tts");
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
-        declare_parameter("cmd_low_topic", "~/cmd_low");
-#endif
-        declare_parameter("estop_topic", "/estop");
+        // ========== Static parameters ==========
+        params_.declare("mode_change_service_name", "~/change_mode", "", false);
+        params_.declare("ready_locomotion_service_name", "~/ready_locomotion", "", false);
+        params_.declare("release_arms_service_name", "~/release_arms", "", false);
+        params_.declare("reset_integral_error_service_name", "~/reset_integral_error", "", false);
+        params_.declare("set_profile_service_name", "~/set_profile", "", false);
 
-        // ========== Grab parameters ==========
-        mode_change_service_name_ = get_parameter("mode_change_service_name").as_string();
-        ready_locomotion_service_name_ = get_parameter("ready_locomotion_service_name").as_string();
-        release_arms_service_name_ = get_parameter("release_arms_service_name").as_string();
-        reset_integral_error_service_name_ = get_parameter("reset_integral_error_service_name").as_string();
-        set_profile_service_name_ = get_parameter("set_profile_service_name").as_string();
-        current_mode_topic_ = get_parameter("current_mode_topic").as_string();
-        current_profile_topic_ = get_parameter("current_profile_topic").as_string();
-        cmd_vel_topic_ = get_parameter("cmd_vel_topic").as_string();
-        cmd_arm_topic_ = get_parameter("cmd_arm_topic").as_string();
-        joint_states_topic_ = get_parameter("joint_states_topic").as_string();
-        tts_topic_ = get_parameter("tts_topic").as_string();
+        params_.declare("current_mode_topic", "~/current_mode", "", false);
+        params_.declare("current_profile_topic", "~/current_profile", "", false);
+        params_.declare("cmd_vel_topic", "~/cmd_vel", "", false);
+        params_.declare("cmd_arm_topic", "~/cmd_arm", "", false);
+        params_.declare("joint_states_topic", "~/joint_states", "", false);
+        params_.declare("tts_topic", "~/tts", "", false);
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
-        cmd_low_topic_ = get_parameter("cmd_low_topic").as_string();
+        params_.declare("cmd_low_topic", "~/cmd_low", "", false);
 #endif
-        estop_topic_ = get_parameter("estop_topic").as_string();
-        volume_ = static_cast<std::uint8_t>(get_parameter("volume").as_int());
+        params_.declare("estop_topic", "/estop", "", false);
+
+        params_.declare("motion_switcher_client_timeout", 5.0, FloatRange{1.0, 30.0, 0.5}, "", false);
+        params_.declare("loco_client_timeout", 10.0, FloatRange{1.0, 30.0, 0.5}, "", false);
+        params_.declare("audio_client_timeout", 5.0, FloatRange{1.0, 30.0, 0.5}, "", false);
+
+        // ========== Dynamic parameters ==========
+        params_.declare("volume", 100, IntRange{0, 100});
+        params_.declare("ready_locomotion_stand_up_delay", 5, IntRange{0, 30});
+        params_.declare("ready_locomotion_start_delay", 10, IntRange{0, 30});
+        params_.declare("release_arms_steps", 250, IntRange{1, 1000});
+        params_.declare("release_arms_interval_ms", 20, IntRange{1, 100});
+
+        // ========== Gain parameters (per-profile) ==========
+        declare_profile_gains<Default>(params_);
+        declare_profile_gains<Damp>(params_);
+        declare_profile_gains<VisualServo>(params_);
+        declare_profile_gains<WholeBodyControl>(params_);
+        declare_profile_gains<EffortOnly>(params_, false);
+
+        // Load initial gains from the default profile
+        apply_profile_gains(current_profile_);
     }
 
     // ========== Initialization ==========
@@ -77,31 +110,18 @@ namespace unitree_interface {
             return;
         }
 
-        const float msc_timeout = static_cast<float>(
-            get_parameter("motion_switcher_client_timeout").as_double()
-        );
-        const float loco_client_timeout = static_cast<float>(
-            get_parameter("loco_client_timeout").as_double()
-        );
-        const float audio_client_timeout = static_cast<float>(
-            get_parameter("audio_client_timeout").as_double()
-        );
+        const auto msc_timeout = static_cast<float>(params_.get_double("motion_switcher_client_timeout"));
+        const auto loco_client_timeout = static_cast<float>(params_.get_double("loco_client_timeout"));
+        const auto audio_client_timeout = static_cast<float>(params_.get_double("audio_client_timeout"));
 
         sdk_wrapper_ = std::make_unique<UnitreeSDKWrapper>(logger_);
-        // At this point, sdk_wrapper_ is guaranteed to not be a nullptr
 
         if (!sdk_wrapper_->initialize(msc_timeout, loco_client_timeout, audio_client_timeout)) {
-            /*
-            sdk_wrapper_.initialize() might be able to throw, if the SDK's init
-            methods themselves can throw. Unfortunately, we don't know if that's
-            the case here. It most likely isn't, since the sdk seems to use errors
-            as returns.
-            */
             RCLCPP_ERROR(logger_, "Failed to initialize SDK wrapper");
             throw std::runtime_error("Unitree SDK initialization failed");
         }
 
-        sdk_wrapper_->set_volume(volume_);
+        sdk_wrapper_->set_volume(static_cast<std::uint8_t>(params_.get_int("volume")));
 
         current_mode_ = Transition<std::monostate, IdleMode>::execute(*sdk_wrapper_);
         RCLCPP_INFO(
@@ -128,7 +148,7 @@ namespace unitree_interface {
 
     void UnitreeInterface::initialize_services() {
         mode_change_service_ = create_service<unitree_interface_msgs::srv::ChangeControlMode>(
-            mode_change_service_name_,
+            params_.get_string("mode_change_service_name"),
             [this](
                 const unitree_interface_msgs::srv::ChangeControlMode::Request::SharedPtr request, // NOLINT
                 unitree_interface_msgs::srv::ChangeControlMode::Response::SharedPtr response
@@ -138,7 +158,7 @@ namespace unitree_interface {
         );
 
         ready_locomotion_service_ = create_service<std_srvs::srv::Trigger>(
-            ready_locomotion_service_name_,
+            params_.get_string("ready_locomotion_service_name"),
             [this](
                 const std_srvs::srv::Trigger::Request::SharedPtr request, // NOLINT
                 std_srvs::srv::Trigger::Response::SharedPtr response
@@ -148,7 +168,7 @@ namespace unitree_interface {
         );
 
         release_arms_service_ = create_service<std_srvs::srv::Trigger>(
-            release_arms_service_name_,
+            params_.get_string("release_arms_service_name"),
             [this](
                 const std_srvs::srv::Trigger::Request::SharedPtr request, // NOLINT
                 std_srvs::srv::Trigger::Response::SharedPtr response
@@ -158,7 +178,7 @@ namespace unitree_interface {
         );
 
         reset_integral_error_service_ = create_service<std_srvs::srv::Trigger>(
-            reset_integral_error_service_name_,
+            params_.get_string("reset_integral_error_service_name"),
             [this](
                 const std_srvs::srv::Trigger::Request::SharedPtr request, // NOLINT
                 std_srvs::srv::Trigger::Response::SharedPtr response
@@ -168,7 +188,7 @@ namespace unitree_interface {
         );
 
         set_profile_service_ = create_service<unitree_interface_msgs::srv::SetProfile>(
-            set_profile_service_name_,
+            params_.get_string("set_profile_service_name"),
             [this](
                 const unitree_interface_msgs::srv::SetProfile::Request::SharedPtr request, // NOLINT
                 unitree_interface_msgs::srv::SetProfile::Response::SharedPtr response
@@ -186,17 +206,17 @@ namespace unitree_interface {
                         .reliable();
 
         current_mode_pub_ = create_publisher<unitree_interface_msgs::msg::ControlMode>(
-            current_mode_topic_,
+            params_.get_string("current_mode_topic"),
             qos
         );
 
         current_profile_pub_ = create_publisher<unitree_interface_msgs::msg::Profile>(
-            current_profile_topic_,
+            params_.get_string("current_profile_topic"),
             qos
         );
 
         joint_states_pub_ = create_publisher<sensor_msgs::msg::JointState>(
-            joint_states_topic_,
+            params_.get_string("joint_states_topic"),
             rclcpp::QoS(10) // NOLINT
         );
 
@@ -205,7 +225,7 @@ namespace unitree_interface {
 
     void UnitreeInterface::create_subscriptions() {
         estop_sub_ = create_subscription<std_msgs::msg::Empty>(
-            estop_topic_,
+            params_.get_string("estop_topic"),
             rclcpp::QoS(1),
             [this](const std_msgs::msg::Empty::SharedPtr) { // NOLINT
                 estop_callback();
@@ -213,7 +233,7 @@ namespace unitree_interface {
         );
 
         tts_sub_ = create_subscription<std_msgs::msg::String>(
-            tts_topic_,
+            params_.get_string("tts_topic"),
             rclcpp::QoS(10), // NOLINT
             [this](const std_msgs::msg::String::SharedPtr message) { // NOLINT
                 tts_callback(message);
@@ -247,7 +267,7 @@ namespace unitree_interface {
                     );
                 } else if constexpr (std::is_same_v<ModeType, HighLevelMode>) {
                     cmd_vel_sub_ = create_subscription<geometry_msgs::msg::Twist>(
-                        cmd_vel_topic_,
+                        params_.get_string("cmd_vel_topic"),
                         rclcpp::QoS(10), // NOLINT
                         [this](const geometry_msgs::msg::Twist::SharedPtr message) { // NOLINT
                             cmd_vel_callback(message);
@@ -255,7 +275,7 @@ namespace unitree_interface {
                     );
 
                     cmd_arm_sub_ = create_subscription<sensor_msgs::msg::JointState>(
-                        cmd_arm_topic_,
+                        params_.get_string("cmd_arm_topic"),
                         rclcpp::QoS(10), // NOLINT
                         [this](const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
                             cmd_arm_callback(message);
@@ -270,7 +290,7 @@ namespace unitree_interface {
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
                 } else if constexpr (std::is_same_v<ModeType, LowLevelMode>) {
                     cmd_low_sub_ = create_subscription<sensor_msgs::msg::JointState>(
-                        cmd_low_topic_,
+                        params_.get_string("cmd_low_topic"),
                         rclcpp::QoS(10), // NOLINT
                         [this](const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
                             cmd_low_callback(message);
@@ -283,6 +303,30 @@ namespace unitree_interface {
             },
             current_mode_
         );
+    }
+
+    void UnitreeInterface::apply_profile_gains(const Profile& profile) {
+        const auto profile_name = std::visit(
+            [](const auto& p) -> const char* {
+                using ProfileType = std::decay_t<decltype(p)>;
+                return ProfileTraits<ProfileType>::name();
+            },
+            profile
+        );
+
+        const std::string prefix = std::string(profile_name) + "/";
+
+        for (std::size_t i = 0; i < joints::num_joints; ++i) {
+            current_kp_[i] = static_cast<float>(
+                params_.get_double(prefix + "kp/" + joints::joint_names[i])
+            );
+            current_kd_[i] = static_cast<float>(
+                params_.get_double(prefix + "kd/" + joints::joint_names[i])
+            );
+            current_ki_[i] = static_cast<float>(
+                params_.get_double(prefix + "ki/" + joints::joint_names[i])
+            );
+        }
     }
 
     // ========== Callbacks ==========
@@ -326,8 +370,8 @@ namespace unitree_interface {
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
             RCLCPP_INFO(logger_, "Ready locomotion sequence requested");
 
-            const std::int64_t stand_up_delay = get_parameter("ready_locomotion_stand_up_delay").as_int();
-            const std::int64_t start_delay = get_parameter("ready_locomotion_start_delay").as_int();
+            const auto stand_up_delay = params_.get_int("ready_locomotion_stand_up_delay");
+            const auto start_delay = params_.get_int("ready_locomotion_start_delay");
 
             if (!sdk_wrapper_->damp()) {
                 response->success = false;
@@ -366,8 +410,8 @@ namespace unitree_interface {
         std_srvs::srv::Trigger::Response::SharedPtr response // NOLINT
     ) {
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
-            const auto steps = static_cast<int>(get_parameter("release_arms_steps").as_int());
-            const auto interval_ms = static_cast<int>(get_parameter("release_arms_interval_ms").as_int());
+            const auto steps = params_.get_int("release_arms_steps");
+            const auto interval_ms = params_.get_int("release_arms_interval_ms");
 
             releasing_arms_ = true;
             sdk_wrapper_->release_arms(steps, interval_ms);
@@ -412,6 +456,7 @@ namespace unitree_interface {
         }
 
         sdk_wrapper_->reset_integral_error();
+        apply_profile_gains(current_profile_);
         publish_current_profile();
 
         response->success = true;
@@ -467,17 +512,15 @@ namespace unitree_interface {
         }
 
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
-            const auto [profile_kp, profile_kd, profile_ki] = get_profile_gains(current_profile_);
-
             auto [indices, position, velocity, effort, kp, kd, ki] =
                 joints::resolve_joint_commands(
                     message->name,
                     message->position,
                     message->velocity,
                     message->effort,
-                    profile_kp,
-                    profile_kd,
-                    profile_ki
+                    current_kp_,
+                    current_kd_,
+                    current_ki_
                 );
 
             for (std::size_t i = 0; i < indices.size(); ++i) {
@@ -515,17 +558,15 @@ namespace unitree_interface {
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     void UnitreeInterface::cmd_low_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
         if (std::holds_alternative<LowLevelMode>(current_mode_)) {
-            const auto [profile_kp, profile_kd, profile_ki] = get_profile_gains(current_profile_);
-
             auto [indices, position, velocity, effort, kp, kd, ki] =
                 joints::resolve_joint_commands(
                     message->name,
                     message->position,
                     message->velocity,
                     message->effort,
-                    profile_kp,
-                    profile_kd,
-                    profile_ki
+                    current_kp_,
+                    current_kd_,
+                    current_ki_
                 );
 
             sdk_wrapper_->send_low_commands(
