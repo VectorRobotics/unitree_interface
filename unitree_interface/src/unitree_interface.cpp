@@ -21,29 +21,36 @@
 namespace unitree_interface {
 
     template <typename ProfileType>
-    static void declare_profile_gains(
-        dynamic_params::DynamicParams& params,
-        const bool dynamic = true
-    ) {
+    void UnitreeInterface::declare_profile_gains(const bool dynamic) {
         using dynamic_params::FloatRange;
 
         const std::string prefix = std::string(ProfileTraits<ProfileType>::name()) + "/";
 
         for (std::size_t i = 0; i < joints::num_joints; ++i) {
-            params.declare(
+            params_.declare(
                 prefix + "kp/" + joints::joint_names[i],
                 static_cast<double>(ProfileType::kp[i]),
-                FloatRange{0.0, 200.0, 0.1},
+                FloatRange{0.0, 200.0},
                 "",
-                dynamic
+                dynamic,
+                [this, i](const rclcpp::Parameter& p) {
+                    if (ProfileTraits<ProfileType>::id == get_active_profile_id()) {
+                        current_kp_[i] = static_cast<float>(p.as_double());
+                    }
+                }
             );
 
-            params.declare(
+            params_.declare(
                 prefix + "kd/" + joints::joint_names[i],
                 static_cast<double>(ProfileType::kd[i]),
-                FloatRange{0.0, 50.0, 0.1},
+                FloatRange{0.0, 50.0},
                 "",
-                dynamic
+                dynamic,
+                [this, i](const rclcpp::Parameter& p) {
+                    if (ProfileTraits<ProfileType>::id == get_active_profile_id()) {
+                        current_kd_[i] = static_cast<float>(p.as_double());
+                    }
+                }
             );
         }
     }
@@ -85,11 +92,11 @@ namespace unitree_interface {
         params_.declare("release_arms_interval_ms", 20, IntRange{1, 100});
 
         // ========== Gain parameters (per-profile) ==========
-        declare_profile_gains<Default>(params_);
-        declare_profile_gains<Damp>(params_);
-        declare_profile_gains<VisualServo>(params_);
-        declare_profile_gains<WholeBodyControl>(params_);
-        declare_profile_gains<EffortOnly>(params_, false);
+        declare_profile_gains<Default>();
+        declare_profile_gains<Damp>();
+        declare_profile_gains<VisualServo>();
+        declare_profile_gains<WholeBodyControl>();
+        declare_profile_gains<EffortOnly>(false);
 
         // Load initial gains from the default profile
         apply_profile_gains(current_profile_);
@@ -284,6 +291,16 @@ namespace unitree_interface {
                 }
             },
             current_mode_
+        );
+    }
+
+    std::uint8_t UnitreeInterface::get_active_profile_id() const {
+        return std::visit(
+            [](const auto& p) -> std::uint8_t {
+                using ProfileType = std::decay_t<decltype(p)>;
+                return ProfileTraits<ProfileType>::id;
+            },
+            current_profile_
         );
     }
 
