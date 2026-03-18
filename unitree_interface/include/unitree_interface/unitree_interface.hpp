@@ -46,7 +46,12 @@ namespace unitree_interface {
 
         void setup_mode_dependent_subscriptions();
 
+        template <typename ProfileType>
+        void declare_profile_gains(bool dynamic = true);
+
         void apply_profile_gains(const Profile& profile);
+
+        std::uint8_t get_active_profile_id() const;
 
         // ========== Callbacks ==========
         void handle_mode_change_request(

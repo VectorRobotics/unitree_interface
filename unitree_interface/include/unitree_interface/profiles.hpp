@@ -6,8 +6,6 @@
 #include "unitree_interface_msgs/msg/profile.hpp"
 
 #include <array>
-#include <tuple>
-#include <type_traits>
 #include <variant>
 
 namespace unitree_interface {
@@ -45,22 +43,22 @@ namespace unitree_interface {
             10.0F,
 
             // Left arm
-            10.0F,
-            10.0F,
-            10.0F,
-            10.0F,
-            10.0F,
-            10.0F,
-            10.0F,
+            14.2F,
+            14.2F,
+            14.2F,
+            14.2F,
+            14.2F,
+            16.7F,
+            16.7F,
 
             // Right arm
-            10.0F,
-            10.0F,
-            10.0F,
-            10.0F,
-            10.0F,
-            10.0F,
-            10.0F,
+            14.2F,
+            14.2F,
+            14.2F,
+            14.2F,
+            14.2F,
+            16.7F,
+            16.7F,
         };
 
         static constexpr std::array<float, joints::num_joints> kd {
@@ -86,22 +84,22 @@ namespace unitree_interface {
             2.0F,
 
             // Left arm
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
+            0.9F,
+            0.9F,
+            0.9F,
+            0.9F,
+            0.9F,
+            1.06F,
+            1.06F,
 
             // Right arm
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
+            0.9F,
+            0.9F,
+            0.9F,
+            0.9F,
+            0.9F,
+            1.06F,
+            1.06F,
         };
 
         static constexpr std::array<float, joints::num_joints> ki {};
@@ -179,43 +177,43 @@ namespace unitree_interface {
 
         static constexpr std::array<float, joints::num_joints> ki {
             // Left leg
-            0.05F,
-            0.05F,
-            0.05F,
-            0.05F,
-            0.05F,
-            0.05F,
+            0.0F,
+            0.0F,
+            0.0F,
+            0.0F,
+            0.0F,
+            0.0F,
 
             // Right leg
-            0.05F,
-            0.05F,
-            0.05F,
-            0.05F,
-            0.05F,
-            0.05F,
+            0.0F,
+            0.0F,
+            0.0F,
+            0.0F,
+            0.0F,
+            0.0F,
 
             // Waist
-            0.05F,
-            0.05F,
-            0.05F,
+            0.0F,
+            0.0F,
+            0.0F,
 
             // Left arm
-            0.1F,
-            0.1F,
-            0.1F,
-            0.1F,
-            0.05F,
-            0.05F,
-            0.05F,
+            3.43323F,
+            3.43323F,
+            3.43323F,
+            3.43323F,
+            3.43323F,
+            3.43323F,
+            3.43323F,
 
             // Right arm
-            0.1F,
-            0.1F,
-            0.1F,
-            0.1F,
-            0.05F,
-            0.05F,
-            0.05F,
+            2.28882F,
+            2.28882F,
+            2.28882F,
+            2.28882F,
+            2.28882F,
+            2.28882F,
+            2.28882F,
         };
     };
 
@@ -268,27 +266,6 @@ namespace unitree_interface {
         EffortOnly
     >;
     // clang-format on
-
-    using GainArrays = std::tuple<
-        const std::array<float, joints::num_joints>&,
-        const std::array<float, joints::num_joints>&,
-        const std::array<float, joints::num_joints>&
-    >;
-
-    inline GainArrays get_profile_gains(const Profile& profile) {
-        return std::visit(
-            [](const auto& p) -> GainArrays {
-                using ProfileType = std::decay_t<decltype(p)>;
-
-                return std::tie(
-                    ProfileType::kp,
-                    ProfileType::kd,
-                    ProfileType::ki
-                );
-            },
-            profile
-        );
-    }
 
 } // namespace unitree_interface
 
