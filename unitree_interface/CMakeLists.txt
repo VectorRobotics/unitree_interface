@@ -18,6 +18,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(unitree_interface_msgs REQUIRED)
+find_package(dynamic_params REQUIRED)
 
 # unitree_sdk2
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # Don't build unitree_sdk2 examples
@@ -53,6 +54,7 @@ ament_target_dependencies(unitree_interface_lib
   sensor_msgs
   std_srvs
   unitree_interface_msgs
+  dynamic_params
 )
 
 target_compile_definitions(unitree_interface_lib

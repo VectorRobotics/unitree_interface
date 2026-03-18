@@ -3,11 +3,14 @@
 
 #include "unitree_interface/control_modes.hpp"
 #include "unitree_interface/profiles.hpp"
+#include "unitree_interface/topology.hpp"
 #include "unitree_interface/unitree_sdk_wrapper.hpp"
 #include "unitree_interface_msgs/msg/control_mode.hpp"
 #include "unitree_interface_msgs/msg/profile.hpp"
 #include "unitree_interface_msgs/srv/change_control_mode.hpp"
 #include "unitree_interface_msgs/srv/set_profile.hpp"
+
+#include <dynamic_params/dynamic_params.hpp>
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -17,6 +20,7 @@
 #include <std_srvs/srv/trigger.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 
+#include <array>
 #include <atomic>
 #include <memory>
 
@@ -41,6 +45,13 @@ namespace unitree_interface {
         void create_subscriptions();
 
         void setup_mode_dependent_subscriptions();
+
+        template <typename ProfileType>
+        void declare_profile_gains(bool dynamic = true);
+
+        void apply_profile_gains(const Profile& profile);
+
+        std::uint8_t get_active_profile_id() const;
 
         // ========== Callbacks ==========
         void handle_mode_change_request(
@@ -81,27 +92,14 @@ namespace unitree_interface {
         void publish_current_profile() const;
 
         rclcpp::Logger logger_;
+        dynamic_params::DynamicParams params_;
         std::unique_ptr<UnitreeSDKWrapper> sdk_wrapper_;
         ControlMode current_mode_;
         Profile current_profile_;
         std::atomic<bool> releasing_arms_{false};
 
-        std::string mode_change_service_name_;
-        std::string ready_locomotion_service_name_;
-        std::string release_arms_service_name_;
-        std::string set_profile_service_name_;
-        std::string current_mode_topic_;
-        std::string current_profile_topic_;
-        std::string cmd_vel_topic_;
-        std::string cmd_arm_topic_;
-        std::string joint_states_topic_;
-        std::string tts_topic_;
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
-        std::string cmd_low_topic_;
-#endif
-        std::string estop_topic_;
-
-        std::uint8_t volume_;
+        std::array<float, joints::num_joints> current_kp_ = Default::kp;
+        std::array<float, joints::num_joints> current_kd_ = Default::kd;
 
         rclcpp::Service<unitree_interface_msgs::srv::ChangeControlMode>::SharedPtr mode_change_service_;
         rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr ready_locomotion_service_;

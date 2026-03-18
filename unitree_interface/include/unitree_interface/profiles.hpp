@@ -217,20 +217,6 @@ namespace unitree_interface {
     >;
     // clang-format on
 
-    using GainArrays = std::tuple<
-        const std::array<float, joints::num_joints>&,
-        const std::array<float, joints::num_joints>&
-    >;
-
-    inline GainArrays get_profile_gains(const Profile& profile) {
-        return std::visit(
-            [](const auto& p) -> GainArrays {
-                return std::tie(p.kp, p.kd);
-            },
-            profile
-        );
-    }
-
 } // namespace unitree_interface
 
 #endif // VECTOR_PROFILES_HPP
