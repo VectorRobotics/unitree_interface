@@ -559,6 +559,7 @@ namespace unitree_interface {
 
         if (joint_states_pub_) {
             sensor_msgs::msg::JointState joint_state;
+            joint_state.header.stamp = rclcpp::Clock{}.now();
             joint_state.name.resize(joints::num_joints);
             joint_state.position.resize(joints::num_joints);
             joint_state.velocity.resize(joints::num_joints);
