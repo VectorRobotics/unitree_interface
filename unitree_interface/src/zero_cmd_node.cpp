@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
     auto node = std::make_shared<rclcpp::Node>("zero_cmd");
 
     node->declare_parameter("topic", "/joint_states");
-    node->declare_parameter("rate_hz", 50.0);
+    node->declare_parameter("rate_hz", 20.0);
 
     const auto topic = node->get_parameter("topic").as_string();
     const auto rate_hz = node->get_parameter("rate_hz").as_double();
