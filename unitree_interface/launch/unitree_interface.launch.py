@@ -62,9 +62,10 @@ def generate_launch_description():
                 'release_arms_interval_ms': LaunchConfiguration('release_arms_interval_ms'),
             }],
             remappings=[
-                ('/unitree_interface/cmd_arm', '/joint_states'),
-                ('/unitree_interface/cmd_low', '/joint_states'),
+                ('/unitree_interface/cmd_arm', '/position_control'),
+                ('/unitree_interface/cmd_low', '/position_control'),
                 ('/unitree_interface/joint_states', '/feedback'),
+                ('/unitree_interface/cmd_vel', '/cmd_vel'),
             ],
         ),
     ])
