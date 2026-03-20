@@ -185,3 +185,29 @@ ros2 topic pub --once /estop std_msgs/msg/Empty "{}"
 ## Joints
 
 All joint topics use URDF-style names. See [`topology.hpp`](unitree_interface/include/unitree_interface/topology.hpp) for joint indices and groups.
+
+To command the joints one by one
+
+```
+ros2 topic pub --once /position_control sensor_msgs/msg/JointState " \
+  { header: {}, \
+  name: [
+    'waist_pitch_joint',
+    'waist_roll_joint',
+    'waist_yaw_joint',
+    'right_shoulder_pitch_joint', 
+    'left_shoulder_pitch_joint', 
+    'left_shoulder_roll_joint', 
+    'right_shoulder_roll_joint', 
+    'left_shoulder_yaw_joint', 
+    'right_shoulder_yaw_joint',
+    'right_elbow_joint',
+    'left_elbow_joint', 
+    'right_wrist_pitch_joint',
+    'left_wrist_pitch_joint',
+    'right_wrist_yaw_joint',
+    'left_wrist_yaw_joint',
+    'lright_wrist_roll_joint',
+    'left_wrist_roll_joint'], 
+position: [0.0,0.0,0.0,-1.5,-1.5,0.0,0.0,0.3,-0.3,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]}"
+```
