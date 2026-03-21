@@ -278,10 +278,10 @@ namespace unitree_interface {
                         ControlModeTraits<ModeType>::name()
                     );
                 } else if constexpr (std::is_same_v<ModeType, HighLevelMode>) {
-                    cmd_vel_sub_ = create_subscription<geometry_msgs::msg::Twist>(
+                    cmd_vel_sub_ = create_subscription<geometry_msgs::msg::TwistStamped>(
                         params_.get_string("cmd_vel_topic"),
                         rclcpp::QoS(10), // NOLINT
-                        [this](const geometry_msgs::msg::Twist::SharedPtr message) { // NOLINT
+                        [this](const geometry_msgs::msg::TwistStamped::SharedPtr message) { // NOLINT
                             cmd_vel_callback(message);
                         }
                     );
@@ -505,11 +505,11 @@ namespace unitree_interface {
         response->message = "Integral error reset";
     }
 
-    void UnitreeInterface::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr message) { // NOLINT
+    void UnitreeInterface::cmd_vel_callback(const geometry_msgs::msg::TwistStamped::SharedPtr message) { // NOLINT
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
-            const auto vx = static_cast<float>(message->linear.x); // m/s
-            const auto vy = static_cast<float>(message->linear.y); // m/s
-            const auto vyaw = static_cast<float>(message->angular.z); // rad/s
+            const auto vx = static_cast<float>(message->twist.linear.x); // m/s
+            const auto vy = static_cast<float>(message->twist.linear.y); // m/s
+            const auto vyaw = static_cast<float>(message->twist.angular.z); // rad/s
 
             sdk_wrapper_->send_velocity_command(vx, vy, vyaw);
         } else {

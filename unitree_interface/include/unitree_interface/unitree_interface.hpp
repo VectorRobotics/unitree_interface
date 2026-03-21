@@ -14,7 +14,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <geometry_msgs/msg/twist.hpp>
+#include <geometry_msgs/msg/twist_stamped.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/empty.hpp>
 #include <std_srvs/srv/trigger.hpp>
@@ -79,7 +79,7 @@ namespace unitree_interface {
             std_srvs::srv::Trigger::Response::SharedPtr response
         );
 
-        void cmd_vel_callback(geometry_msgs::msg::Twist::SharedPtr message);
+        void cmd_vel_callback(geometry_msgs::msg::TwistStamped::SharedPtr message);
 
         void cmd_arm_callback(sensor_msgs::msg::JointState::SharedPtr message);
 
@@ -117,7 +117,7 @@ namespace unitree_interface {
         rclcpp::Publisher<unitree_interface_msgs::msg::Profile>::SharedPtr current_profile_pub_;
         rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_pub_;
 
-        rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
+        rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr cmd_vel_sub_;
         rclcpp::Subscription<std_msgs::msg::String>::SharedPtr tts_sub_;
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr cmd_arm_sub_;
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
