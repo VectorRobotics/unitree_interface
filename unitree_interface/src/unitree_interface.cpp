@@ -373,6 +373,7 @@ namespace unitree_interface {
         if (success) {
             RCLCPP_INFO(logger_, "Mode transition successful");
 
+            sdk_wrapper_->invalidate_setpoint();
             sdk_wrapper_->reset_integral_error();
             setup_mode_dependent_subscriptions();
             publish_current_mode();

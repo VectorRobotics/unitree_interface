@@ -12,9 +12,11 @@
 #include <rclcpp/publisher.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 // ========== Forward declarations ==========
@@ -36,6 +38,21 @@ namespace unitree_interface {
     // ========== Aliases ==========
     using LowCmd = unitree_hg::msg::dds_::LowCmd_;
     using LowState = unitree_hg::msg::dds_::LowState_;
+
+    // ========== Control setpoint ==========
+    enum class ControlTarget { ArmControl, LowLevelControl };
+
+    struct Setpoint {
+        std::array<float, joints::num_joints> position{};
+        std::array<float, joints::num_joints> velocity{};
+        std::array<float, joints::num_joints> effort{};
+        std::array<float, joints::num_joints> kp{};
+        std::array<float, joints::num_joints> kd{};
+        std::array<float, joints::num_joints> ki{};
+        std::vector<std::uint8_t> active_indices;
+        ControlTarget target{ControlTarget::ArmControl};
+        bool valid{false};
+    };
 
     class UnitreeSDKWrapper {
     public:
@@ -81,6 +98,8 @@ namespace unitree_interface {
         bool select_mode(const std::string& mode_name);
 
         void reset_integral_error();
+
+        void invalidate_setpoint();
 
         // ========== High-level capabilities ==========
         bool send_velocity_command(
@@ -141,13 +160,16 @@ namespace unitree_interface {
         // ========== Low-level capabilities ==========
         LowCmd construct_low_cmd(
             const std::vector<std::uint8_t>& indices,
-            const std::vector<float>& position,
-            const std::vector<float>& velocity,
-            const std::vector<float>& effort,
-            const std::vector<float>& kp,
-            const std::vector<float>& kd,
+            const std::array<float, joints::num_joints>& position,
+            const std::array<float, joints::num_joints>& velocity,
+            const std::array<float, joints::num_joints>& effort,
+            const std::array<float, joints::num_joints>& kp,
+            const std::array<float, joints::num_joints>& kd,
             float weight = 0.0F
         );
+
+        // ========== Control loop ==========
+        void control_loop();
 
         // ========== Callbacks ==========
         void low_state_callback(const void* message);
@@ -165,14 +187,19 @@ namespace unitree_interface {
         const std::string arm_sdk_topic_{"rt/arm_sdk"};
         const std::string low_cmd_topic_{"rt/lowcmd"};
         const std::string low_state_topic_{"rt/lowstate"};
-        // const std::string torso_imu_topic_{"rt/secondary_imu"};
 
         const std::uint8_t mode_pr_{0}; // Always use PR mode (command joint angles)
         std::uint8_t mode_machine_{0};
 
         mutable std::mutex position_mutex_;
         std::array<float, joints::num_joints> actual_position_{};
+
+        mutable std::mutex setpoint_mutex_;
+        Setpoint setpoint_;
         std::array<float, joints::num_joints> integral_error_{};
+
+        std::thread control_thread_;
+        std::atomic<bool> control_running_{false};
 
         unitree::robot::ChannelPublisherPtr<LowCmd> arm_sdk_pub_;
         unitree::robot::ChannelPublisherPtr<LowCmd> low_cmd_pub_;
