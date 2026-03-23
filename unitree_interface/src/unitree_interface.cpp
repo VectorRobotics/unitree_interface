@@ -563,8 +563,6 @@ namespace unitree_interface {
             return;
         }
 
-        message = sensor_msgs::msg::JointState();
-
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
 
             message_.header = message->header;
