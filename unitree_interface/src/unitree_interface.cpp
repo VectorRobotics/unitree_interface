@@ -154,6 +154,7 @@ namespace unitree_interface {
         create_subscriptions();
 
         setup_mode_dependent_subscriptions();
+        setup_mode_dependent_timers();
         publish_current_mode();
         publish_current_profile();
     }
@@ -309,6 +310,35 @@ namespace unitree_interface {
                         }
                     );
 #endif
+                } else {
+                    static_assert(always_false<ModeType>::value, "Illegal mode");
+                }
+            },
+            current_mode_
+        );
+    }
+
+    void UnitreeInterface::setup_mode_dependent_timers() {
+
+        // Create timer based on current mode
+        std::visit(
+            [this](auto&& mode){
+                using ModeType = std::decay_t<decltype(mode)>;
+
+                if constexpr (std::is_same_v<ModeType, HighLevelMode>) {
+
+                    control_loop_ = this->create_wall_timer(
+                        50ms, 
+                        [this](){
+                            controller()
+                        }
+                    );
+
+                    RCLCPP_INFO(
+                        logger_,
+                        "%s: timers created",
+                        ControlModeTraits<HighLevelMode>::name()
+                    );
                 } else {
                     static_assert(always_false<ModeType>::value, "Illegal mode");
                 }
@@ -533,13 +563,44 @@ namespace unitree_interface {
             return;
         }
 
+        message = sensor_msgs::msg::JointState();
+
+        if (std::holds_alternative<HighLevelMode>(current_mode_)) {
+
+            message_.header = message->header;
+            message_.name = message->name;
+            message_.position = message->position;
+            message_.velocity = message->velocity;
+            message_.effort = message->effort;
+            
+        } else {
+            RCLCPP_WARN_THROTTLE(
+                logger_,
+                *get_clock(),
+                1000,
+                "Received cmd_arm but not in HighLevelMode"
+            );
+        }
+    }
+
+    void UnitreeInterface::controller() { // NOLINT
+        if (releasing_arms_) {
+            RCLCPP_WARN_THROTTLE(
+                logger_,
+                *get_clock(),
+                1000,
+                "Arm commands blocked while releasing arms"
+            );
+            return;
+        }
+
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
             auto [indices, position, velocity, effort, kp, kd, ki] =
                 joints::resolve_joint_commands(
-                    message->name,
-                    message->position,
-                    message->velocity,
-                    message->effort,
+                    message_.name,
+                    message_.position,
+                    message_.velocity,
+                    message_.effort,
                     current_kp_,
                     current_kd_,
                     current_ki_

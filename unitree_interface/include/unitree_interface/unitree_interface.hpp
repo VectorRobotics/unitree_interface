@@ -46,6 +46,8 @@ namespace unitree_interface {
 
         void setup_mode_dependent_subscriptions();
 
+        void setup_mode_dependent_timers();
+
         template <typename ProfileType>
         void declare_profile_gains(bool dynamic = true);
 
@@ -83,6 +85,8 @@ namespace unitree_interface {
 
         void cmd_arm_callback(sensor_msgs::msg::JointState::SharedPtr message);
 
+        void controller();
+
 #ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         void cmd_low_callback(sensor_msgs::msg::JointState::SharedPtr message);
 #endif
@@ -107,6 +111,8 @@ namespace unitree_interface {
         std::array<float, joints::num_joints> current_kd_ = Default::kd;
         std::array<float, joints::num_joints> current_ki_ = Default::ki;
 
+        sensor_msgs::msg::JointState message_;
+
         rclcpp::Service<unitree_interface_msgs::srv::ChangeControlMode>::SharedPtr mode_change_service_;
         rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr ready_locomotion_service_;
         rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr release_arms_service_;
@@ -124,6 +130,8 @@ namespace unitree_interface {
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr cmd_low_sub_;
 #endif
         rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr estop_sub_;
+
+        rclcpp::TimerBase::SharedPtr control_loop_;
     };
 
 } // namespace unitree_interface
