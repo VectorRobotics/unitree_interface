@@ -408,7 +408,8 @@ namespace unitree_interface {
         const std::vector<float>& effort,
         const std::vector<float>& kp,
         const std::vector<float>& kd,
-        const std::vector<float>& ki
+        const std::vector<float>& ki,
+        const int ms
     ) {
         if (!initialized_ || !arm_sdk_pub_) {
             RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
@@ -427,10 +428,10 @@ namespace unitree_interface {
         for (std::size_t i = 0; i < indices.size(); ++i) {
             const auto joint_index = indices[i];
 
-            const auto error = position[i] - actual_pos[joint_index];
-            integral_error_[joint_index] += error;
+            error_[joint_index] = position[i] - actual_pos[joint_index];
+            integral_error_[joint_index] += error_[joint_index];
 
-            adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index]);
+            adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index] * ms);
         }
 
         auto command = construct_low_cmd(

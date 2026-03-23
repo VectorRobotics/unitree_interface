@@ -106,6 +106,7 @@ namespace unitree_interface {
         ControlMode current_mode_;
         Profile current_profile_;
         std::atomic<bool> releasing_arms_{false};
+        std::atomic<bool> start_arm_cmd_{false};
 
         std::array<float, joints::num_joints> current_kp_ = Default::kp;
         std::array<float, joints::num_joints> current_kd_ = Default::kd;

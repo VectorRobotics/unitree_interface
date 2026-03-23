@@ -104,7 +104,8 @@ namespace unitree_interface {
             const std::vector<float>& effort,
             const std::vector<float>& kp,
             const std::vector<float>& kd,
-            const std::vector<float>& ki
+            const std::vector<float>& ki,
+            const int
         );
 
         void release_arms(int steps, int interval_ms);
@@ -126,6 +127,9 @@ namespace unitree_interface {
         bool set_volume(std::uint8_t volume);
 
         bool send_speech_command(const std::string& message);
+
+        std::array<float, joints::num_joints> integral_error_{};
+        std::array<float, joints::num_joints> error_{};
 
     private:
         void initialize_clients(
@@ -172,7 +176,6 @@ namespace unitree_interface {
 
         mutable std::mutex position_mutex_;
         std::array<float, joints::num_joints> actual_position_{};
-        std::array<float, joints::num_joints> integral_error_{};
 
         unitree::robot::ChannelPublisherPtr<LowCmd> arm_sdk_pub_;
         unitree::robot::ChannelPublisherPtr<LowCmd> low_cmd_pub_;

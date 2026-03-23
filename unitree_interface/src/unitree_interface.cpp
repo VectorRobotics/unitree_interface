@@ -103,6 +103,7 @@ namespace unitree_interface {
         params_.declare("ready_locomotion_start_delay", 10, IntRange{0, 30});
         params_.declare("release_arms_steps", 250, IntRange{1, 1000});
         params_.declare("release_arms_interval_ms", 20, IntRange{1, 100});
+        params_.declare("controller_time_step_ms", 20);
 
         // ========== Gain parameters (per-profile) ==========
         declare_profile_gains<Default>();
@@ -233,6 +234,16 @@ namespace unitree_interface {
             rclcpp::QoS(10) // NOLINT
         );
 
+        // error_pub_ = create_publisher<std_msgs::msg::Float64>(
+        //     params_.get_string("error_topic"),
+        //     rclcpp::QoS(10) // NOLINT
+        // );
+
+        // int_error_pub_ = create_publisher<std_msgs::msg::Float64>(
+        //     params_.get_string("int_error_topic"),
+        //     rclcpp::QoS(10) // NOLINT
+        // );
+
         RCLCPP_INFO(logger_, "Publishers created");
     }
 
@@ -325,19 +336,29 @@ namespace unitree_interface {
             [this](auto&& mode){
                 using ModeType = std::decay_t<decltype(mode)>;
 
-                if constexpr (std::is_same_v<ModeType, HighLevelMode>) {
-
+                if constexpr (
+                    std::is_same_v<ModeType, std::monostate> ||
+                    std::is_same_v<ModeType, IdleMode> ||
+                    std::is_same_v<ModeType, EmergencyMode> ||
+                    std::is_same_v<ModeType, LowLevelMode>
+                ) {
+                    RCLCPP_INFO(
+                        logger_,
+                        "%s: No timer created",
+                        ControlModeTraits<ModeType>::name()
+                    );
+                } else if constexpr (std::is_same_v<ModeType, HighLevelMode>) {
+                    using namespace std::chrono_literals;
                     control_loop_ = this->create_wall_timer(
-                        50ms, 
-                        [this](){
-                            controller()
-                        }
+                        std::chrono::milliseconds(params_.get_int("controller_time_step_ms")), 
+                        [this](){ controller(); }
                     );
 
                     RCLCPP_INFO(
                         logger_,
-                        "%s: timers created",
-                        ControlModeTraits<HighLevelMode>::name()
+                        "%s: timers created with time step %d ms",
+                        ControlModeTraits<HighLevelMode>::name(),
+                        std::chrono::milliseconds(params_.get_int("controller_time_step_ms"))
                     );
                 } else {
                     static_assert(always_false<ModeType>::value, "Illegal mode");
@@ -405,6 +426,7 @@ namespace unitree_interface {
 
             sdk_wrapper_->reset_integral_error();
             setup_mode_dependent_subscriptions();
+            setup_mode_dependent_timers();
             publish_current_mode();
 
             response->success = success;
@@ -461,6 +483,7 @@ namespace unitree_interface {
         const std_srvs::srv::Trigger::Request::SharedPtr, // NOLINT
         std_srvs::srv::Trigger::Response::SharedPtr response // NOLINT
     ) {
+        sdk_wrapper_->reset_integral_error();
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
             const auto steps = params_.get_int("release_arms_steps");
             const auto interval_ms = params_.get_int("release_arms_interval_ms");
@@ -563,6 +586,8 @@ namespace unitree_interface {
             return;
         }
 
+        start_arm_cmd_ = true;
+
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
 
             message_.header = message->header;
@@ -588,6 +613,16 @@ namespace unitree_interface {
                 *get_clock(),
                 1000,
                 "Arm commands blocked while releasing arms"
+            );
+            return;
+        }
+
+        if (!start_arm_cmd_) {
+            RCLCPP_WARN_THROTTLE(
+                logger_,
+                *get_clock(),
+                1000,
+                "Arm commands blocked while no setpoint received"
             );
             return;
         }
@@ -624,8 +659,10 @@ namespace unitree_interface {
                 effort,
                 kp,
                 kd,
-                ki
+                ki,
+                params_.get_int("controller_time_step_ms")
             );
+
         } else {
             RCLCPP_WARN_THROTTLE(
                 logger_,

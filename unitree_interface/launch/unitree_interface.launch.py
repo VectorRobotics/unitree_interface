@@ -46,6 +46,11 @@ def generate_launch_description():
             default_value='20',
             description='Delay between subsequent messages to release control of arms (milliseconds)'
         ),
+        DeclareLaunchArgument(
+            'controller_time_step_ms',
+            default_value='2',
+            description='Delay between subsequent messages to release control of arms (milliseconds)'
+        ),
         Node(
             package='unitree_interface',
             executable='unitree_interface_node',
@@ -60,6 +65,7 @@ def generate_launch_description():
                 'ready_locomotion_start_delay': LaunchConfiguration('ready_locomotion_start_delay'),
                 'release_arms_steps': LaunchConfiguration('release_arms_steps'),
                 'release_arms_interval_ms': LaunchConfiguration('release_arms_interval_ms'),
+                'controller_time_step_ms': LaunchConfiguration('controller_time_step_ms'),
             }],
             remappings=[
                 ('/unitree_interface/cmd_arm', '/position_control'),
