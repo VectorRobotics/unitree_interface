@@ -330,7 +330,6 @@ namespace unitree_interface {
     }
 
     void UnitreeInterface::setup_mode_dependent_timers() {
-
         // Create timer based on current mode
         std::visit(
             [this](auto&& mode){
@@ -356,9 +355,9 @@ namespace unitree_interface {
 
                     RCLCPP_INFO(
                         logger_,
-                        "%s: timers created with time step %d ms",
+                        "%s: timers created with time step %ld ms",
                         ControlModeTraits<HighLevelMode>::name(),
-                        std::chrono::milliseconds(params_.get_int("controller_time_step_ms"))
+                        std::chrono::milliseconds(params_.get_int("controller_time_step_ms")).count()
                     );
                 } else {
                     static_assert(always_false<ModeType>::value, "Illegal mode");
@@ -490,6 +489,8 @@ namespace unitree_interface {
 
             releasing_arms_ = true;
             sdk_wrapper_->release_arms(steps, interval_ms);
+            sdk_wrapper_->reset_integral_error();
+            start_arm_cmd_ = false;
             releasing_arms_ = false;
 
             response->success = true;
@@ -586,16 +587,14 @@ namespace unitree_interface {
             return;
         }
 
-        start_arm_cmd_ = true;
-
         if (std::holds_alternative<HighLevelMode>(current_mode_)) {
+            start_arm_cmd_ = true;
 
             message_.header = message->header;
             message_.name = message->name;
             message_.position = message->position;
             message_.velocity = message->velocity;
             message_.effort = message->effort;
-            
         } else {
             RCLCPP_WARN_THROTTLE(
                 logger_,
