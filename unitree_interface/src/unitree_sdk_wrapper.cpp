@@ -205,6 +205,7 @@ namespace unitree_interface {
     }
 
     bool UnitreeSDKWrapper::damp_high() {
+        reset_integral_error();
         if (!initialized_ || !loco_client_) {
             RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
             return false;
@@ -318,6 +319,8 @@ namespace unitree_interface {
 
         RCLCPP_INFO(logger_, "Releasing arm SDK control (%d steps, %dms interval)", steps, interval_ms);
 
+        reset_integral_error();
+
         const float weight_per_step = 1.0F / static_cast<float>(steps);
         const auto interval = std::chrono::milliseconds(interval_ms);
 
@@ -429,9 +432,17 @@ namespace unitree_interface {
             const auto joint_index = indices[i];
 
             error_[joint_index] = position[i] - actual_pos[joint_index];
-            integral_error_[joint_index] += error_[joint_index];
+            
+            if (std::abs(error_[joint_index]) >= 0.001 && std::abs(error_[joint_index]) < 0.4) {
+                integral_error_[joint_index] += error_[joint_index];
+            }
+            // max integral is calculated as if the max error (0.4 rad) is sustained 
+            // for 5 seconds with a control loop of 2ms, then clamp
+            integral_error_[joint_index] = std::clamp(integral_error_[joint_index], -1000.0, 1000.0);
 
-            adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index] * ms);
+            // Clamp to 50% of max motor torque rating
+            double adj = effort[i] + ki[i] * integral_error_[joint_index] * ms;
+            adjusted_effort.push_back(std::clamp(adj, -60.0, 60.0));
         }
 
         auto command = construct_low_cmd(
