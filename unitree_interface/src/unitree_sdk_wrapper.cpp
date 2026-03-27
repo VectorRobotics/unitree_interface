@@ -438,11 +438,11 @@ namespace unitree_interface {
             }
             // max integral is calculated as if the max error (0.4 rad) is sustained 
             // for 5 seconds with a control loop of 2ms, then clamp
-            integral_error_[joint_index] = std::clamp(integral_error_[joint_index], -1000.0, 1000.0);
+            integral_error_[joint_index] = std::clamp(integral_error_[joint_index], -1000.0f, 1000.0f);
 
             // Clamp to 50% of max motor torque rating
-            double adj = effort[i] + ki[i] * integral_error_[joint_index] * ms;
-            adjusted_effort.push_back(std::clamp(adj, -60.0, 60.0));
+            float adj = effort[i] + ki[i] * integral_error_[joint_index] * ms;
+            adjusted_effort.push_back(std::clamp(adj, -60.0f, 60.0f));
         }
 
         auto command = construct_low_cmd(
