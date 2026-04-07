@@ -24,6 +24,7 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
 
 namespace unitree_interface {
@@ -47,6 +48,8 @@ namespace unitree_interface {
         void create_subscriptions();
 
         void setup_mode_dependent_subscriptions();
+
+        void setup_mode_dependent_timers();
 
         template <typename ProfileType>
         void declare_profile_gains(bool dynamic = true);
@@ -90,6 +93,8 @@ namespace unitree_interface {
 
         void cmd_arm_callback(sensor_msgs::msg::JointState::SharedPtr message);
 
+        void control_loop();
+
         void cmd_low_callback(sensor_msgs::msg::JointState::SharedPtr message);
 
         void estop_callback();
@@ -114,11 +119,16 @@ namespace unitree_interface {
         std::array<float, embodiment::num_joints> current_ki_ = Default::ki;
 
         std::atomic<bool> releasing_arms_{false};
+        std::atomic<bool> setpoint_valid_{false};
+
+        std::mutex setpoint_mutex_;
+        embodiment::ResolvedCommand setpoint_;
 
         // ========== Callback groups ==========
         rclcpp::CallbackGroup::SharedPtr estop_cbg_;
         rclcpp::CallbackGroup::SharedPtr command_cbg_;
         rclcpp::CallbackGroup::SharedPtr service_cbg_;
+        rclcpp::CallbackGroup::SharedPtr controller_cbg_;
 
         // ========== Services ==========
         rclcpp::Service<unitree_interface_msgs::srv::ChangeControlMode>::SharedPtr mode_change_service_;
@@ -141,6 +151,9 @@ namespace unitree_interface {
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr cmd_arm_sub_;
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr cmd_low_sub_;
         rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr estop_sub_;
+
+        // ========== Timers ==========
+        rclcpp::TimerBase::SharedPtr control_loop_timer_;
     };
 
 } // namespace unitree_interface

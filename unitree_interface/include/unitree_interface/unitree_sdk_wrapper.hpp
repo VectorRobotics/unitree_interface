@@ -44,7 +44,10 @@ namespace unitree_interface {
     class UnitreeSDKWrapper {
     public:
         explicit UnitreeSDKWrapper(
-            rclcpp::Logger logger
+            rclcpp::Logger logger,
+            float integral_dead_zone_min,
+            float integral_dead_zone_max,
+            float integral_clamp
         );
 
         // Can't copy
@@ -108,7 +111,8 @@ namespace unitree_interface {
             const std::array<float, embodiment::num_joints>& effort,
             const std::array<float, embodiment::num_joints>& kp,
             const std::array<float, embodiment::num_joints>& kd,
-            const std::array<float, embodiment::num_joints>& ki
+            const std::array<float, embodiment::num_joints>& ki,
+            float dt
         );
 
         void release_arms(int steps, int interval_ms);
@@ -176,6 +180,10 @@ namespace unitree_interface {
         // ========== Member variables ==========
         rclcpp::Logger logger_;
         bool initialized_{false};
+
+        const float integral_dead_zone_min_;
+        const float integral_dead_zone_max_;
+        const float integral_clamp_;
 
         // ========== Clients ==========
         std::unique_ptr<unitree::robot::b2::MotionSwitcherClient> msc_;

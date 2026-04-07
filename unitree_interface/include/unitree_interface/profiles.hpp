@@ -43,22 +43,22 @@ namespace unitree_interface {
             150.0F,
 
             // Left arm
-            14.2F,
-            14.2F,
-            14.2F,
-            14.2F,
-            14.2F,
-            16.7F,
-            16.7F,
+            18.0F,
+            18.0F,
+            18.0F,
+            18.0F,
+            18.0F,
+            18.0F,
+            18.0F,
 
             // Right arm
-            14.2F,
-            14.2F,
-            14.2F,
-            14.2F,
-            14.2F,
-            16.7F,
-            16.7F,
+            18.0F,
+            18.0F,
+            18.0F,
+            18.0F,
+            18.0F,
+            18.0F,
+            18.0F,
         };
 
         static constexpr std::array<float, embodiment::num_joints> kd {
@@ -84,22 +84,22 @@ namespace unitree_interface {
             2.0F,
 
             // Left arm
-            2.5F,
-            2.5F,
-            2.5F,
-            3.5F,
-            1.5F,
-            1.5F,
-            1.06F,
+            2.0F,
+            2.0F,
+            2.0F,
+            2.0F,
+            2.0F,
+            2.0F,
+            2.0F,
 
             // Right arm
-            2.5F,
-            2.5F,
-            2.5F,
-            3.5F,
-            1.5F,
-            1.5F,
-            1.06F,
+            2.0F,
+            2.0F,
+            2.0F,
+            2.0F,
+            2.0F,
+            2.0F,
+            2.0F,
         };
 
         static constexpr std::array<float, embodiment::num_joints> ki {};
@@ -198,22 +198,22 @@ namespace unitree_interface {
             0.0F,
 
             // Left arm
-            1.5F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
+            0.03F,
+            0.15F,
+            0.15F,
+            0.15F,
+            0.15F,
+            0.15F,
+            0.15F,
 
             // Right arm
-            1.5F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
+            0.03F,
+            0.15F,
+            0.15F,
+            0.15F,
+            0.15F,
+            0.15F,
+            0.15F,
         };
     };
 

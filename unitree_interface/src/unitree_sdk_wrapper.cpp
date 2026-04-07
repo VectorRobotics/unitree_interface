@@ -19,8 +19,14 @@
 namespace unitree_interface {
 
     UnitreeSDKWrapper::UnitreeSDKWrapper(
-        rclcpp::Logger logger
-    ) : logger_(std::move(logger)) {
+        rclcpp::Logger logger,
+        const float integral_dead_zone_min,
+        const float integral_dead_zone_max,
+        const float integral_clamp
+    ) : logger_(std::move(logger)),
+        integral_dead_zone_min_(integral_dead_zone_min),
+        integral_dead_zone_max_(integral_dead_zone_max),
+        integral_clamp_(integral_clamp) {
     }
 
     UnitreeSDKWrapper::~UnitreeSDKWrapper() = default;
@@ -230,6 +236,8 @@ namespace unitree_interface {
     }
 
     bool UnitreeSDKWrapper::damp_high() {
+        reset_integral_error();
+
         if (!initialized_ || !loco_client_) {
             RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
             return false;
@@ -416,7 +424,8 @@ namespace unitree_interface {
         const std::array<float, embodiment::num_joints>& effort,
         const std::array<float, embodiment::num_joints>& kp,
         const std::array<float, embodiment::num_joints>& kd,
-        const std::array<float, embodiment::num_joints>& ki
+        const std::array<float, embodiment::num_joints>& ki,
+        const float dt
     ) {
         if (!initialized_ || !arm_sdk_pub_) {
             RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
@@ -437,9 +446,18 @@ namespace unitree_interface {
                 if (!active[i]) { continue; }
 
                 const auto error = position[i] - actual_pos[i];
-                integral_error_[i] += error;
+                const auto abs_error = std::abs(error);
 
-                adjusted_effort[i] += ki[i] * integral_error_[i];
+                if (abs_error >= integral_dead_zone_min_ && abs_error < integral_dead_zone_max_) {
+                    integral_error_[i] += error;
+                }
+
+                integral_error_[i] = std::clamp(integral_error_[i], -integral_clamp_, integral_clamp_);
+                adjusted_effort[i] = std::clamp(
+                    adjusted_effort[i] + ki[i] * integral_error_[i] * dt,
+                    -embodiment::effort_limit[i],
+                    embodiment::effort_limit[i]
+                );
             }
         }
 

@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
 
     rclcpp::executors::MultiThreadedExecutor executor(
         rclcpp::ExecutorOptions(),
-        3
+        4
     );
     executor.add_node(node);
     executor.spin();

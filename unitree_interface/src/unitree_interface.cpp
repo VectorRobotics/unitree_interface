@@ -86,8 +86,9 @@ namespace unitree_interface {
         estop_cbg_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         command_cbg_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         service_cbg_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+        controller_cbg_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
-        // ========== Static parameters ==========
+        // ========== Parameters ==========
         params_.declare("mode_change_service_name", "~/change_mode", "", false);
         params_.declare("ready_locomotion_service_name", "~/ready_locomotion", "", false);
         params_.declare("release_arms_service_name", "~/release_arms", "", false);
@@ -110,14 +111,17 @@ namespace unitree_interface {
         params_.declare("loco_client_timeout", 10.0, FloatRange{1.0, 30.0, 0.5}, "", false);
         params_.declare("audio_client_timeout", 5.0, FloatRange{1.0, 30.0, 0.5}, "", false);
 
-        // ========== Dynamic parameters ==========
-        params_.declare("volume", 100, IntRange{0, 100});
-        params_.declare("ready_locomotion_stand_up_delay", 5, IntRange{0, 30});
-        params_.declare("ready_locomotion_start_delay", 10, IntRange{0, 30});
-        params_.declare("release_arms_steps", 250, IntRange{1, 1000});
-        params_.declare("release_arms_interval_ms", 20, IntRange{1, 100});
-        params_.declare("hand_pose_steps", 100, IntRange{1, 500});
-        params_.declare("hand_pose_interval_ms", 10, IntRange{1, 100});
+        params_.declare("volume", 100, IntRange{0, 100}, "", false);
+        params_.declare("ready_locomotion_stand_up_delay", 5, IntRange{0, 30}, "", false);
+        params_.declare("ready_locomotion_start_delay", 10, IntRange{0, 30}, "", false);
+        params_.declare("release_arms_steps", 250, IntRange{1, 1000}, "", false);
+        params_.declare("release_arms_interval_ms", 20, IntRange{1, 100}, "", false);
+        params_.declare("hand_pose_steps", 100, IntRange{1, 500}, "", false);
+        params_.declare("hand_pose_interval_ms", 10, IntRange{1, 100}, "", false);
+        params_.declare("controller_frequency_hz", 500, IntRange{100, 1000}, "", false);
+        params_.declare("integral_dead_zone_min", 0, FloatRange{0.0, 0.1}, "", false);
+        params_.declare("integral_dead_zone_max", 0.2, FloatRange{0.01, 2.0}, "", false);
+        params_.declare("integral_clamp", 1000.0, FloatRange{1.0, 10000.0}, "", false);
 
         // ========== Gain parameters (per-profile) ==========
         declare_profile_gains<Default>();
@@ -141,7 +145,12 @@ namespace unitree_interface {
         const auto loco_client_timeout = static_cast<float>(params_.get_double("loco_client_timeout"));
         const auto audio_client_timeout = static_cast<float>(params_.get_double("audio_client_timeout"));
 
-        sdk_wrapper_ = std::make_unique<UnitreeSDKWrapper>(logger_);
+        sdk_wrapper_ = std::make_unique<UnitreeSDKWrapper>(
+            logger_,
+            static_cast<float>(params_.get_double("integral_dead_zone_min")),
+            static_cast<float>(params_.get_double("integral_dead_zone_max")),
+            static_cast<float>(params_.get_double("integral_clamp"))
+        );
 
         if (!sdk_wrapper_->initialize(msc_timeout, loco_client_timeout, audio_client_timeout)) {
             RCLCPP_ERROR(logger_, "Failed to initialize SDK wrapper");
@@ -170,6 +179,7 @@ namespace unitree_interface {
         create_subscriptions();
 
         setup_mode_dependent_subscriptions();
+        setup_mode_dependent_timers();
         publish_current_mode();
         publish_current_profile();
     }
@@ -371,6 +381,68 @@ namespace unitree_interface {
         );
     }
 
+    void UnitreeInterface::setup_mode_dependent_timers() {
+        control_loop_timer_.reset();
+
+        std::visit(
+            [this](auto&& mode) {
+                using ModeType = std::decay_t<decltype(mode)>;
+
+                if constexpr (std::is_same_v<ModeType, HighLevelMode>) {
+                    const auto frequency = params_.get_int("controller_frequency_hz");
+                    const auto period = std::chrono::duration<double>(1.0 / frequency);
+
+                    control_loop_timer_ = create_wall_timer(
+                        std::chrono::duration_cast<std::chrono::nanoseconds>(period),
+                        [this]() { control_loop(); },
+                        controller_cbg_
+                    );
+
+                    RCLCPP_INFO(
+                        logger_,
+                        "Control loop started at %d Hz",
+                        frequency
+                    );
+                }
+            },
+            current_mode_
+        );
+    }
+
+    void UnitreeInterface::control_loop() {
+        if (releasing_arms_) { return; }
+        if (!setpoint_valid_) { return; }
+
+        embodiment::ResolvedCommand cmd;
+        std::array<float, embodiment::num_joints> kp_snapshot;
+        std::array<float, embodiment::num_joints> kd_snapshot;
+        std::array<float, embodiment::num_joints> ki_snapshot;
+
+        {
+            std::lock_guard lock(setpoint_mutex_);
+            cmd = setpoint_;
+        }
+        {
+            std::shared_lock lock(state_mutex_);
+            kp_snapshot = current_kp_;
+            kd_snapshot = current_kd_;
+            ki_snapshot = current_ki_;
+        }
+
+        const float dt = 1.0F / static_cast<float>(params_.get_int("controller_frequency_hz"));
+
+        sdk_wrapper_->send_arm_commands(
+            cmd.active,
+            cmd.position,
+            cmd.velocity,
+            cmd.effort,
+            kp_snapshot,
+            kd_snapshot,
+            ki_snapshot,
+            dt
+        );
+    }
+
     std::uint8_t UnitreeInterface::get_active_profile_id() const {
         return std::visit(
             [](const auto& p) -> std::uint8_t {
@@ -430,7 +502,9 @@ namespace unitree_interface {
                 RCLCPP_INFO(logger_, "Mode transition successful");
 
                 sdk_wrapper_->reset_integral_error();
+                setpoint_valid_ = false;
                 setup_mode_dependent_subscriptions();
+                setup_mode_dependent_timers();
 
                 response->success = success;
                 response->message = "Mode transition successful";
@@ -531,6 +605,7 @@ namespace unitree_interface {
         const auto interval_ms = params_.get_int("release_arms_interval_ms");
 
         releasing_arms_ = true;
+        setpoint_valid_ = false;
         sdk_wrapper_->release_arms(steps, interval_ms);
         releasing_arms_ = false;
 
@@ -693,26 +768,6 @@ namespace unitree_interface {
             return;
         }
 
-        std::array<float, embodiment::num_joints> kp_snapshot;
-        std::array<float, embodiment::num_joints> kd_snapshot;
-        std::array<float, embodiment::num_joints> ki_snapshot;
-        {
-            std::shared_lock lock(state_mutex_);
-
-            if (!std::holds_alternative<HighLevelMode>(current_mode_)) {
-                RCLCPP_WARN_THROTTLE(
-                    logger_,
-                    *get_clock(),
-                    1000,
-                    "Received cmd_arm but not in HighLevelMode"
-                );
-                return;
-            }
-            kp_snapshot = current_kp_;
-            kd_snapshot = current_kd_;
-            ki_snapshot = current_ki_;
-        }
-
         auto cmd = embodiment::resolve_names(
             message->name,
             message->position,
@@ -721,15 +776,11 @@ namespace unitree_interface {
             embodiment::upper_body
         );
 
-        sdk_wrapper_->send_arm_commands(
-            cmd.active,
-            cmd.position,
-            cmd.velocity,
-            cmd.effort,
-            kp_snapshot,
-            kd_snapshot,
-            ki_snapshot
-        );
+        {
+            std::lock_guard lock(setpoint_mutex_);
+            setpoint_ = cmd;
+        }
+        setpoint_valid_ = true;
     }
 
     void UnitreeInterface::cmd_low_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
@@ -777,7 +828,9 @@ namespace unitree_interface {
 
         std::tie(current_mode_, std::ignore) = try_transition<EmergencyMode>(current_mode_, *sdk_wrapper_);
 
+        setpoint_valid_ = false;
         setup_mode_dependent_subscriptions();
+        setup_mode_dependent_timers();
         publish_current_mode();
     }
 
