@@ -59,7 +59,7 @@ namespace unitree_interface {
             params_.declare(
                 prefix + "ki/" + embodiment::joint_names[i],
                 static_cast<double>(ProfileType::ki[i]),
-                FloatRange{0.0, 12.0},
+                FloatRange{0.0, 20.0},
                 "",
                 dynamic,
                 [this, i](const rclcpp::Parameter& param) {

@@ -17,7 +17,6 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <vector>
 
 // ========== Forward declarations ==========
 namespace rclcpp {

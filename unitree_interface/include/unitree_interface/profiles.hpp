@@ -1,7 +1,6 @@
 #ifndef VECTOR_PROFILES_HPP
 #define VECTOR_PROFILES_HPP
 
-// #include "unitree_interface/control_modes.hpp"
 #include "unitree_interface/topology.hpp"
 #include "unitree_interface_msgs/msg/profile.hpp"
 
@@ -198,22 +197,22 @@ namespace unitree_interface {
             0.0F,
 
             // Left arm
-            0.03F,
-            0.15F,
-            0.15F,
-            0.15F,
-            0.15F,
-            0.15F,
-            0.15F,
+            3.0F,
+            15.0F,
+            15.0F,
+            15.0F,
+            15.0F,
+            15.0F,
+            15.0F,
 
             // Right arm
-            0.03F,
-            0.15F,
-            0.15F,
-            0.15F,
-            0.15F,
-            0.15F,
-            0.15F,
+            3.0F,
+            15.0F,
+            15.0F,
+            15.0F,
+            15.0F,
+            15.0F,
+            15.0F,
         };
     };
 
