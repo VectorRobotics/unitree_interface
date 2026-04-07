@@ -448,9 +448,11 @@ namespace unitree_interface {
                 const auto error = position[i] - actual_pos[i];
                 const auto abs_error = std::abs(error);
 
+                // Trapezoidal integration with dead zone
                 if (abs_error >= integral_dead_zone_min_ && abs_error < integral_dead_zone_max_) {
-                    integral_error_[i] += error;
+                    integral_error_[i] += 0.5F * (error + previous_error_[i]);
                 }
+                previous_error_[i] = error;
 
                 integral_error_[i] = std::clamp(integral_error_[i], -integral_clamp_, integral_clamp_);
                 adjusted_effort[i] = std::clamp(
@@ -611,6 +613,7 @@ namespace unitree_interface {
         {
             std::lock_guard lock(integral_mutex_);
             integral_error_.fill(0.0F);
+            previous_error_.fill(0.0F);
         }
         RCLCPP_INFO(logger_, "Integral error reset");
     }
