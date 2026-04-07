@@ -26,10 +26,10 @@ int main(int argc, char* argv[]) {
 
     sensor_msgs::msg::JointState msg;
 
-    namespace joints = unitree_interface::joints;
+    namespace embodiment = unitree_interface::embodiment;
 
-    for (const auto& joint : joints::upper_body) {
-        msg.name.emplace_back(joints::to_name(joint));
+    for (const auto& joint : embodiment::upper_body) {
+        msg.name.emplace_back(embodiment::to_name(joint));
     }
 
     const auto n = msg.name.size();

@@ -7,6 +7,8 @@
 #include <unitree/robot/channel/channel_subscriber.hpp>
 #include <unitree/idl/hg/LowCmd_.hpp>
 #include <unitree/idl/hg/LowState_.hpp>
+#include <unitree/idl/hg/HandCmd_.hpp>
+#include <unitree/idl/hg/HandState_.hpp>
 
 #include <rclcpp/logger.hpp>
 #include <rclcpp/publisher.hpp>
@@ -36,6 +38,8 @@ namespace unitree_interface {
     // ========== Aliases ==========
     using LowCmd = unitree_hg::msg::dds_::LowCmd_;
     using LowState = unitree_hg::msg::dds_::LowState_;
+    using HandCmd = unitree_hg::msg::dds_::HandCmd_;
+    using HandState = unitree_hg::msg::dds_::HandState_;
 
     class UnitreeSDKWrapper {
     public:
@@ -122,6 +126,19 @@ namespace unitree_interface {
             const std::vector<float>& ki
         );
 
+        // ========== Hand capabilities ==========
+        void send_hand_command(
+            hands::Side side,
+            const std::array<float, hands::num_joints>& positions
+        );
+
+        std::array<float, hands::num_joints> get_hand_position(hands::Side side);
+
+        void set_hand_states_publishers(
+            rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr left_pub,
+            rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr right_pub
+        );
+
         // ========== Audio capabilities ==========
         bool set_volume(std::uint8_t volume);
 
@@ -138,6 +155,8 @@ namespace unitree_interface {
 
         void initialize_low_level_machinery();
 
+        void initialize_hand_machinery();
+
         // ========== Low-level capabilities ==========
         LowCmd construct_low_cmd(
             const std::vector<std::uint8_t>& indices,
@@ -151,6 +170,8 @@ namespace unitree_interface {
 
         // ========== Callbacks ==========
         void low_state_callback(const void* message);
+        void left_hand_state_callback(const void* message);
+        void right_hand_state_callback(const void* message);
 
         // ========== Member variables ==========
         rclcpp::Logger logger_;
@@ -171,14 +192,32 @@ namespace unitree_interface {
         std::uint8_t mode_machine_{0};
 
         mutable std::mutex position_mutex_;
-        std::array<float, joints::num_joints> actual_position_{};
+        std::array<float, embodiment::num_joints> actual_position_{};
 
         mutable std::mutex integral_mutex_;
-        std::array<float, joints::num_joints> integral_error_{};
+        std::array<float, embodiment::num_joints> integral_error_{};
 
         unitree::robot::ChannelPublisherPtr<LowCmd> arm_sdk_pub_;
         unitree::robot::ChannelPublisherPtr<LowCmd> low_cmd_pub_;
         unitree::robot::ChannelSubscriberPtr<LowState> low_state_sub_;
+
+        // ========== Hand stuff ==========
+        const std::string left_hand_cmd_topic_{"rt/dex3/left/cmd"};
+        const std::string right_hand_cmd_topic_{"rt/dex3/right/cmd"};
+        const std::string left_hand_state_topic_{"rt/lf/dex3/left/state"};
+        const std::string right_hand_state_topic_{"rt/lf/dex3/right/state"};
+
+        mutable std::mutex hand_position_mutex_;
+        std::array<float, hands::num_joints> left_hand_position_{};
+        std::array<float, hands::num_joints> right_hand_position_{};
+
+        unitree::robot::ChannelPublisherPtr<HandCmd> left_hand_cmd_pub_;
+        unitree::robot::ChannelPublisherPtr<HandCmd> right_hand_cmd_pub_;
+        unitree::robot::ChannelSubscriberPtr<HandState> left_hand_state_sub_;
+        unitree::robot::ChannelSubscriberPtr<HandState> right_hand_state_sub_;
+
+        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr left_hand_states_pub_;
+        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr right_hand_states_pub_;
 
         rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_pub_;
     };

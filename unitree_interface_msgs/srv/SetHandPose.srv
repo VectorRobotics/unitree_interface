@@ -1,0 +1,11 @@
+uint8 HAND_LEFT  = 0
+uint8 HAND_RIGHT = 1
+
+uint8 POSE_BALL  = 0
+uint8 POSE_POINT = 1
+
+uint8 target_hand
+uint8 target_pose
+---
+bool success
+string message

@@ -43,6 +43,7 @@ namespace unitree_interface {
             );
             initialize_arm_sdk_machinery();
             initialize_low_level_machinery();
+            initialize_hand_machinery();
 
             initialized_ = true;
         } catch (const std::exception& e) {
@@ -103,6 +104,30 @@ namespace unitree_interface {
             10 // NOLINT
         );
         RCLCPP_INFO(logger_, "Low-level state subscription created");
+    }
+
+    void UnitreeSDKWrapper::initialize_hand_machinery() {
+        left_hand_cmd_pub_ = std::make_shared<unitree::robot::ChannelPublisher<HandCmd>>(left_hand_cmd_topic_);
+        left_hand_cmd_pub_->InitChannel();
+
+        right_hand_cmd_pub_ = std::make_shared<unitree::robot::ChannelPublisher<HandCmd>>(right_hand_cmd_topic_);
+        right_hand_cmd_pub_->InitChannel();
+
+        RCLCPP_INFO(logger_, "Hand command publishers initialized");
+
+        left_hand_state_sub_ = std::make_shared<unitree::robot::ChannelSubscriber<HandState>>(left_hand_state_topic_);
+        left_hand_state_sub_->InitChannel(
+            [this](const void* message) { left_hand_state_callback(message); },
+            10 // NOLINT
+        );
+
+        right_hand_state_sub_ = std::make_shared<unitree::robot::ChannelSubscriber<HandState>>(right_hand_state_topic_);
+        right_hand_state_sub_->InitChannel(
+            [this](const void* message) { right_hand_state_callback(message); },
+            10 // NOLINT
+        );
+
+        RCLCPP_INFO(logger_, "Hand state subscriptions created");
     }
 
     std::pair<std::string, std::string> UnitreeSDKWrapper::get_current_mode() const {
@@ -235,7 +260,7 @@ namespace unitree_interface {
         std::vector<float> kp;
         std::vector<float> kd;
 
-        for (const auto& joint : joints::all_joints) {
+        for (const auto& joint : embodiment::all_joints) {
             const auto index = static_cast<std::uint8_t>(joint);
             indices.push_back(index);
             position.push_back(0.0F);
@@ -330,7 +355,7 @@ namespace unitree_interface {
 
         {
             std::lock_guard lock(position_mutex_);
-            for (const auto& joint : joints::upper_body) {
+            for (const auto& joint : embodiment::upper_body) {
                 const auto index = static_cast<std::uint8_t>(joint);
                 hold_indices.push_back(index);
                 hold_position.push_back(actual_position_[index]);
@@ -376,7 +401,7 @@ namespace unitree_interface {
         command.mode_pr() = mode_pr_;
         command.mode_machine() = mode_machine_;
 
-        command.motor_cmd().at(static_cast<std::uint8_t>(joints::JointIndex::WeightParameter)).q() = weight;
+        command.motor_cmd().at(static_cast<std::uint8_t>(embodiment::JointIndex::WeightParameter)).q() = weight;
 
         for (std::size_t i = 0; i < indices.size(); ++i) {
             const auto joint_index = indices[i];
@@ -384,7 +409,7 @@ namespace unitree_interface {
             command.motor_cmd().at(joint_index).mode() = 1;
             command.motor_cmd().at(joint_index).q()    = position[i];
             command.motor_cmd().at(joint_index).dq()   = velocity[i];
-            command.motor_cmd().at(joint_index).tau()  = std::clamp(effort[i], -joints::effort_limit[joint_index], joints::effort_limit[joint_index]);
+            command.motor_cmd().at(joint_index).tau()  = std::clamp(effort[i], -embodiment::effort_limit[joint_index], embodiment::effort_limit[joint_index]);
             command.motor_cmd().at(joint_index).kp()   = kp[i];
             command.motor_cmd().at(joint_index).kd()   = kd[i];
         }
@@ -415,7 +440,7 @@ namespace unitree_interface {
             return;
         }
 
-        std::array<float, joints::num_joints> actual_pos;
+        std::array<float, embodiment::num_joints> actual_pos;
         {
             std::lock_guard lock(position_mutex_);
             actual_pos = actual_position_;
@@ -463,7 +488,7 @@ namespace unitree_interface {
             return;
         }
 
-        std::array<float, joints::num_joints> actual_pos;
+        std::array<float, embodiment::num_joints> actual_pos;
         {
             std::lock_guard lock(position_mutex_);
             actual_pos = actual_position_;
@@ -536,6 +561,46 @@ namespace unitree_interface {
         return false;
     }
 
+    // ========== Hand capabilities ==========
+    void UnitreeSDKWrapper::send_hand_command(
+        const hands::Side side,
+        const std::array<float, hands::num_joints>& positions
+    ) {
+        auto& pub = (side == hands::Side::Left) ? left_hand_cmd_pub_ : right_hand_cmd_pub_;
+
+        if (!initialized_ || !pub) {
+            RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
+            return;
+        }
+
+        HandCmd cmd{};
+        cmd.motor_cmd().resize(hands::num_joints);
+
+        for (std::size_t i = 0; i < hands::num_joints; ++i) {
+            cmd.motor_cmd()[i].mode(hands::encode_motor_mode(static_cast<std::uint8_t>(i)));
+            cmd.motor_cmd()[i].q(positions[i]);
+            cmd.motor_cmd()[i].dq(0.0F);
+            cmd.motor_cmd()[i].tau(0.0F);
+            cmd.motor_cmd()[i].kp(hands::kp[i]);
+            cmd.motor_cmd()[i].kd(hands::kd[i]);
+        }
+
+        pub->Write(cmd);
+    }
+
+    std::array<float, hands::num_joints> UnitreeSDKWrapper::get_hand_position(const hands::Side side) {
+        std::lock_guard lock(hand_position_mutex_);
+        return (side == hands::Side::Left) ? left_hand_position_ : right_hand_position_;
+    }
+
+    void UnitreeSDKWrapper::set_hand_states_publishers(
+        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr left_pub,
+        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr right_pub
+    ) {
+        left_hand_states_pub_ = std::move(left_pub);
+        right_hand_states_pub_ = std::move(right_pub);
+    }
+
     // ========== Joint state feedback ==========
     void UnitreeSDKWrapper::set_joint_states_publisher(
         rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr publisher
@@ -561,7 +626,7 @@ namespace unitree_interface {
 
         {
             std::lock_guard lock(position_mutex_);
-            for (std::size_t i = 0; i < joints::num_joints; ++i) {
+            for (std::size_t i = 0; i < embodiment::num_joints; ++i) {
                 actual_position_[i] = state.motor_state()[i].q();
             }
         }
@@ -569,19 +634,65 @@ namespace unitree_interface {
         if (joint_states_pub_) {
             sensor_msgs::msg::JointState joint_state;
             joint_state.header.stamp = rclcpp::Clock{}.now();
-            joint_state.name.resize(joints::num_joints);
-            joint_state.position.resize(joints::num_joints);
-            joint_state.velocity.resize(joints::num_joints);
-            joint_state.effort.resize(joints::num_joints);
+            joint_state.name.resize(embodiment::num_joints);
+            joint_state.position.resize(embodiment::num_joints);
+            joint_state.velocity.resize(embodiment::num_joints);
+            joint_state.effort.resize(embodiment::num_joints);
 
-            for (std::size_t i = 0; i < joints::num_joints; ++i) {
-                joint_state.name[i] = joints::joint_names[i];
+            for (std::size_t i = 0; i < embodiment::num_joints; ++i) {
+                joint_state.name[i] = embodiment::joint_names[i];
                 joint_state.position[i] = state.motor_state()[i].q();
                 joint_state.velocity[i] = state.motor_state()[i].dq();
                 joint_state.effort[i] = state.motor_state()[i].tau_est();
             }
 
             joint_states_pub_->publish(joint_state);
+        }
+    }
+
+    void UnitreeSDKWrapper::left_hand_state_callback(const void* message) {
+        const auto& state = *static_cast<const HandState*>(message);
+
+        {
+            std::lock_guard lock(hand_position_mutex_);
+            for (std::size_t i = 0; i < hands::num_joints; ++i) {
+                left_hand_position_[i] = state.motor_state()[i].q();
+            }
+        }
+
+        if (left_hand_states_pub_) {
+            sensor_msgs::msg::JointState joint_state;
+            joint_state.header.stamp = rclcpp::Clock{}.now();
+            joint_state.position.resize(hands::num_joints);
+
+            for (std::size_t i = 0; i < hands::num_joints; ++i) {
+                joint_state.position[i] = state.motor_state()[i].q();
+            }
+
+            left_hand_states_pub_->publish(joint_state);
+        }
+    }
+
+    void UnitreeSDKWrapper::right_hand_state_callback(const void* message) {
+        const auto& state = *static_cast<const HandState*>(message);
+
+        {
+            std::lock_guard lock(hand_position_mutex_);
+            for (std::size_t i = 0; i < hands::num_joints; ++i) {
+                right_hand_position_[i] = state.motor_state()[i].q();
+            }
+        }
+
+        if (right_hand_states_pub_) {
+            sensor_msgs::msg::JointState joint_state;
+            joint_state.header.stamp = rclcpp::Clock{}.now();
+            joint_state.position.resize(hands::num_joints);
+
+            for (std::size_t i = 0; i < hands::num_joints; ++i) {
+                joint_state.position[i] = state.motor_state()[i].q();
+            }
+
+            right_hand_states_pub_->publish(joint_state);
         }
     }
 

@@ -25,9 +25,9 @@ namespace unitree_interface {
 
         const std::string prefix = std::string(ProfileTraits<ProfileType>::name()) + "/";
 
-        for (std::size_t i = 0; i < joints::num_joints; ++i) {
+        for (std::size_t i = 0; i < embodiment::num_joints; ++i) {
             params_.declare(
-                prefix + "kp/" + joints::joint_names[i],
+                prefix + "kp/" + embodiment::joint_names[i],
                 static_cast<double>(ProfileType::kp[i]),
                 FloatRange{0.0, 200.0},
                 "",
@@ -42,7 +42,7 @@ namespace unitree_interface {
             );
 
             params_.declare(
-                prefix + "kd/" + joints::joint_names[i],
+                prefix + "kd/" + embodiment::joint_names[i],
                 static_cast<double>(ProfileType::kd[i]),
                 FloatRange{0.0, 50.0},
                 "",
@@ -57,7 +57,7 @@ namespace unitree_interface {
             );
 
             params_.declare(
-                prefix + "ki/" + joints::joint_names[i],
+                prefix + "ki/" + embodiment::joint_names[i],
                 static_cast<double>(ProfileType::ki[i]),
                 FloatRange{0.0, 12.0},
                 "",
@@ -93,6 +93,7 @@ namespace unitree_interface {
         params_.declare("release_arms_service_name", "~/release_arms", "", false);
         params_.declare("reset_integral_error_service_name", "~/reset_integral_error", "", false);
         params_.declare("set_profile_service_name", "~/set_profile", "", false);
+        params_.declare("set_hand_pose_service_name", "~/set_hand_pose", "", false);
 
         params_.declare("current_mode_topic", "~/current_mode", "", false);
         params_.declare("current_profile_topic", "~/current_profile", "", false);
@@ -102,6 +103,8 @@ namespace unitree_interface {
         params_.declare("tts_topic", "~/tts", "", false);
         params_.declare("cmd_low_topic", "~/cmd_low", "", false);
         params_.declare("estop_topic", "/estop", "", false);
+        params_.declare("left_hand_states_topic", "~/left_hand_states", "", false);
+        params_.declare("right_hand_states_topic", "~/right_hand_states", "", false);
 
         params_.declare("motion_switcher_client_timeout", 5.0, FloatRange{1.0, 30.0, 0.5}, "", false);
         params_.declare("loco_client_timeout", 10.0, FloatRange{1.0, 30.0, 0.5}, "", false);
@@ -113,6 +116,8 @@ namespace unitree_interface {
         params_.declare("ready_locomotion_start_delay", 10, IntRange{0, 30});
         params_.declare("release_arms_steps", 250, IntRange{1, 1000});
         params_.declare("release_arms_interval_ms", 20, IntRange{1, 100});
+        params_.declare("hand_pose_steps", 100, IntRange{1, 500});
+        params_.declare("hand_pose_interval_ms", 10, IntRange{1, 100});
 
         // ========== Gain parameters (per-profile) ==========
         declare_profile_gains<Default>();
@@ -161,6 +166,7 @@ namespace unitree_interface {
         initialize_services();
         initialize_publishers();
         sdk_wrapper_->set_joint_states_publisher(joint_states_pub_);
+        sdk_wrapper_->set_hand_states_publishers(left_hand_states_pub_, right_hand_states_pub_);
         create_subscriptions();
 
         setup_mode_dependent_subscriptions();
@@ -229,6 +235,18 @@ namespace unitree_interface {
             service_cbg_
         );
 
+        set_hand_pose_service_ = create_service<unitree_interface_msgs::srv::SetHandPose>(
+            params_.get_string("set_hand_pose_service_name"),
+            [this](
+                const unitree_interface_msgs::srv::SetHandPose::Request::SharedPtr request, // NOLINT
+                unitree_interface_msgs::srv::SetHandPose::Response::SharedPtr response
+            ) {
+                handle_set_hand_pose_request(request, response); // NOLINT
+            },
+            rclcpp::ServicesQoS(),
+            service_cbg_
+        );
+
         RCLCPP_INFO(logger_, "Services created");
     }
 
@@ -249,6 +267,16 @@ namespace unitree_interface {
 
         joint_states_pub_ = create_publisher<sensor_msgs::msg::JointState>(
             params_.get_string("joint_states_topic"),
+            rclcpp::QoS(10) // NOLINT
+        );
+
+        left_hand_states_pub_ = create_publisher<sensor_msgs::msg::JointState>(
+            params_.get_string("left_hand_states_topic"),
+            rclcpp::QoS(10) // NOLINT
+        );
+
+        right_hand_states_pub_ = create_publisher<sensor_msgs::msg::JointState>(
+            params_.get_string("right_hand_states_topic"),
             rclcpp::QoS(10) // NOLINT
         );
 
@@ -364,15 +392,15 @@ namespace unitree_interface {
 
         const std::string prefix = std::string(profile_name) + "/";
 
-        for (std::size_t i = 0; i < joints::num_joints; ++i) {
+        for (std::size_t i = 0; i < embodiment::num_joints; ++i) {
             current_kp_[i] = static_cast<float>(
-                params_.get_double(prefix + "kp/" + joints::joint_names[i])
+                params_.get_double(prefix + "kp/" + embodiment::joint_names[i])
             );
             current_kd_[i] = static_cast<float>(
-                params_.get_double(prefix + "kd/" + joints::joint_names[i])
+                params_.get_double(prefix + "kd/" + embodiment::joint_names[i])
             );
             current_ki_[i] = static_cast<float>(
-                params_.get_double(prefix + "ki/" + joints::joint_names[i])
+                params_.get_double(prefix + "ki/" + embodiment::joint_names[i])
             );
         }
     }
@@ -571,6 +599,65 @@ namespace unitree_interface {
         response->message = "Integral error reset";
     }
 
+    void UnitreeInterface::handle_set_hand_pose_request(
+        const unitree_interface_msgs::srv::SetHandPose::Request::SharedPtr request, // NOLINT
+        unitree_interface_msgs::srv::SetHandPose::Response::SharedPtr response // NOLINT
+    ) {
+        {
+            std::shared_lock lock(state_mutex_);
+
+            if (!std::holds_alternative<HighLevelMode>(current_mode_)) {
+                response->success = false;
+                response->message = "Not in HighLevelMode";
+                RCLCPP_WARN(logger_, "Hand pose requested while not in HighLevelMode");
+                return;
+            }
+        }
+
+        const auto side = (request->target_hand == unitree_interface_msgs::srv::SetHandPose::Request::HAND_LEFT)
+            ? hands::Side::Left
+            : hands::Side::Right;
+
+        const std::array<float, hands::num_joints>* target = nullptr;
+
+        switch (request->target_pose) {
+            case unitree_interface_msgs::srv::SetHandPose::Request::POSE_BALL:
+                target = (side == hands::Side::Left) ? &hands::ball_left : &hands::ball_right;
+                break;
+            case unitree_interface_msgs::srv::SetHandPose::Request::POSE_POINT:
+                target = (side == hands::Side::Left) ? &hands::point_left : &hands::point_right;
+                break;
+            default:
+                response->success = false;
+                response->message = "Unknown pose ID";
+                return;
+        }
+
+        const auto steps = params_.get_int("hand_pose_steps");
+        const auto interval_ms = params_.get_int("hand_pose_interval_ms");
+        const auto interval = std::chrono::milliseconds(interval_ms);
+
+        const auto start_pos = sdk_wrapper_->get_hand_position(side);
+
+        for (int step = 0; step <= steps; ++step) {
+            const float t = static_cast<float>(step) / static_cast<float>(steps);
+
+            std::array<float, hands::num_joints> interpolated{};
+            for (std::size_t i = 0; i < hands::num_joints; ++i) {
+                interpolated[i] = start_pos[i] + t * ((*target)[i] - start_pos[i]);
+            }
+
+            sdk_wrapper_->send_hand_command(side, interpolated);
+    
+            std::this_thread::sleep_for(interval);
+        }
+
+        const auto side_name = (side == hands::Side::Left) ? "left" : "right";
+        response->success = true;
+        response->message = std::string("Hand pose set for ") + side_name;
+        RCLCPP_INFO(logger_, "%s", response->message.c_str());
+    }
+
     void UnitreeInterface::cmd_vel_callback(const geometry_msgs::msg::TwistStamped::SharedPtr message) { // NOLINT
         ControlMode mode_snapshot;
         {
@@ -606,9 +693,9 @@ namespace unitree_interface {
             return;
         }
 
-        std::array<float, joints::num_joints> kp_snapshot;
-        std::array<float, joints::num_joints> kd_snapshot;
-        std::array<float, joints::num_joints> ki_snapshot;
+        std::array<float, embodiment::num_joints> kp_snapshot;
+        std::array<float, embodiment::num_joints> kd_snapshot;
+        std::array<float, embodiment::num_joints> ki_snapshot;
         {
             std::shared_lock lock(state_mutex_);
 
@@ -628,7 +715,7 @@ namespace unitree_interface {
 
         {
             auto [indices, position, velocity, effort, kp, kd, ki] =
-                joints::resolve_joint_commands(
+                embodiment::resolve_joint_commands(
                     message->name,
                     message->position,
                     message->velocity,
@@ -639,9 +726,9 @@ namespace unitree_interface {
                 );
 
             for (std::size_t i = 0; i < indices.size(); ++i) {
-                const auto joint_index = static_cast<joints::JointIndex>(indices[i]);
+                const auto joint_index = static_cast<embodiment::JointIndex>(indices[i]);
 
-                if (!joints::contains(joints::upper_body, joint_index)) {
+                if (!embodiment::contains(embodiment::upper_body, joint_index)) {
                     position[i] = 0.0F;
                     velocity[i] = 0.0F;
                     effort[i] = 0.0F;
@@ -664,9 +751,9 @@ namespace unitree_interface {
     }
 
     void UnitreeInterface::cmd_low_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
-        std::array<float, joints::num_joints> kp_snapshot;
-        std::array<float, joints::num_joints> kd_snapshot;
-        std::array<float, joints::num_joints> ki_snapshot;
+        std::array<float, embodiment::num_joints> kp_snapshot;
+        std::array<float, embodiment::num_joints> kd_snapshot;
+        std::array<float, embodiment::num_joints> ki_snapshot;
         {
             std::shared_lock lock(state_mutex_);
 
@@ -685,7 +772,7 @@ namespace unitree_interface {
         }
 
         auto [indices, position, velocity, effort, kp, kd, ki] =
-            joints::resolve_joint_commands(
+            embodiment::resolve_joint_commands(
                 message->name,
                 message->position,
                 message->velocity,

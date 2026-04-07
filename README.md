@@ -15,6 +15,7 @@ ROS 2 interface for the Unitree G1 humanoid robot (29 DoF). Bridges the Unitree 
 | `~/release_arms` | `std_srvs/srv/Trigger` | Ramps down the arm SDK weight from 1.0 to 0.0, handing upper-body control back to the locomotion controller. Blocking (~5s by default). |
 | `~/reset_integral_error` | `std_srvs/srv/Trigger` | Zeros out accumulated integral error for all joints and resets the integral timer. |
 | `~/set_profile` | `unitree_interface_msgs/srv/SetProfile` | Switch the active gain profile. See `Profile.msg` for valid profile IDs. |
+| `~/set_hand_pose` | `unitree_interface_msgs/srv/SetHandPose` | Smoothly move a Dex3 hand to a predefined pose. Requires HighLevelMode. Blocking (~1s by default). See `SetHandPose.srv` for hand/pose IDs. |
 
 ## Published Topics
 
@@ -23,6 +24,8 @@ ROS 2 interface for the Unitree G1 humanoid robot (29 DoF). Bridges the Unitree 
 | `~/current_mode` | `unitree_interface_msgs/msg/ControlMode` | Current control mode (latched, reliable). |
 | `~/current_profile` | `unitree_interface_msgs/msg/Profile` | Current gain profile (latched, reliable). |
 | `~/joint_states` | `sensor_msgs/msg/JointState` | Joint state feedback from the robot. Published at the SDK's `rt/lowstate` rate. Publishes for all 29 joints, using URDF joint names. |
+| `~/left_hand_states` | `sensor_msgs/msg/JointState` | Left Dex3 hand joint state feedback (7 joints). |
+| `~/right_hand_states` | `sensor_msgs/msg/JointState` | Right Dex3 hand joint state feedback (7 joints). |
 
 ## Subscribed Topics
 
@@ -51,8 +54,11 @@ See [`control_modes.md`](unitree_interface/docs/control_modes.md).
 | `release_arms_service_name` | string | `"~/release_arms"` | Service name for releasing arm SDK control. |
 | `reset_integral_error_service_name` | string | `"~/reset_integral_error"` | Service name for resetting integral error. |
 | `set_profile_service_name` | string | `"~/set_profile"` | Service name for switching gain profiles. |
+| `set_hand_pose_service_name` | string | `"~/set_hand_pose"` | Service name for setting hand poses. |
 | `release_arms_steps` | int | `250` | Number of weight ramp-down steps for arm release. |
 | `release_arms_interval_ms` | int | `20` | Delay (ms) between each ramp-down step. Total duration = steps × interval. |
+| `hand_pose_steps` | int | `100` | Number of interpolation steps for hand pose transitions. |
+| `hand_pose_interval_ms` | int | `10` | Delay (ms) between each interpolation step. Total duration = steps × interval. |
 | `current_mode_topic` | string | `"~/current_mode"` | Topic for current mode publication. |
 | `current_profile_topic` | string | `"~/current_profile"` | Topic for current profile publication. |
 | `cmd_vel_topic` | string | `"~/cmd_vel"` | Topic for velocity commands. |
@@ -61,6 +67,8 @@ See [`control_modes.md`](unitree_interface/docs/control_modes.md).
 | `tts_topic` | string | `"~/tts"` | Topic for text-to-speech. |
 | `cmd_low_topic` | string | `"~/cmd_low"` | Topic for low-level commands (if enabled). |
 | `estop_topic` | string | `"/estop"` | Topic for emergency stop. |
+| `left_hand_states_topic` | string | `"~/left_hand_states"` | Topic for left hand state feedback. |
+| `right_hand_states_topic` | string | `"~/right_hand_states"` | Topic for right hand state feedback. |
 
 ## Custom Messages (`unitree_interface_msgs`)
 
@@ -110,6 +118,22 @@ bool success
 string message
 ```
 
+### `SetHandPose.srv`
+
+```
+uint8 HAND_LEFT  = 0
+uint8 HAND_RIGHT = 1
+
+uint8 POSE_BALL  = 0
+uint8 POSE_POINT = 1
+
+uint8 target_hand
+uint8 target_pose
+---
+bool success
+string message
+```
+
 ## Gain Profiles
 
 Each profile defines per-joint kp, kd, and ki gains for all 29 joints. The active profile is selected via `~/set_profile` and determines the motor gains used by `~/cmd_arm` and `~/cmd_low`. See [`profiles.hpp`](unitree_interface/include/unitree_interface/profiles.hpp) for definitions.
@@ -144,6 +168,18 @@ Release arm SDK control back to the locomotion controller:
 
 ```bash
 ros2 service call /unitree_interface/release_arms std_srvs/srv/Trigger "{}"
+```
+
+Point with the left hand:
+
+```bash
+ros2 service call /unitree_interface/set_hand_pose unitree_interface_msgs/srv/SetHandPose "{target_hand: 0, target_pose: 1}"
+```
+
+Ball with the right hand:
+
+```bash
+ros2 service call /unitree_interface/set_hand_pose unitree_interface_msgs/srv/SetHandPose "{target_hand: 1, target_pose: 0}"
 ```
 
 Reset integral error:
