@@ -23,6 +23,7 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include <shared_mutex>
 
 namespace unitree_interface {
 
@@ -83,9 +84,7 @@ namespace unitree_interface {
 
         void cmd_arm_callback(sensor_msgs::msg::JointState::SharedPtr message);
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         void cmd_low_callback(sensor_msgs::msg::JointState::SharedPtr message);
-#endif
 
         void estop_callback();
 
@@ -96,33 +95,42 @@ namespace unitree_interface {
 
         void publish_current_profile() const;
 
+        // ========== Core state ==========
         rclcpp::Logger logger_;
         dynamic_params::DynamicParams params_;
         std::unique_ptr<UnitreeSDKWrapper> sdk_wrapper_;
+
+        mutable std::shared_mutex state_mutex_;
         ControlMode current_mode_;
         Profile current_profile_;
-        std::atomic<bool> releasing_arms_{false};
-
         std::array<float, joints::num_joints> current_kp_ = Default::kp;
         std::array<float, joints::num_joints> current_kd_ = Default::kd;
         std::array<float, joints::num_joints> current_ki_ = Default::ki;
 
+        std::atomic<bool> releasing_arms_{false};
+
+        // ========== Callback groups ==========
+        rclcpp::CallbackGroup::SharedPtr estop_cbg_;
+        rclcpp::CallbackGroup::SharedPtr command_cbg_;
+        rclcpp::CallbackGroup::SharedPtr service_cbg_;
+
+        // ========== Services ==========
         rclcpp::Service<unitree_interface_msgs::srv::ChangeControlMode>::SharedPtr mode_change_service_;
         rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr ready_locomotion_service_;
         rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr release_arms_service_;
         rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_integral_error_service_;
         rclcpp::Service<unitree_interface_msgs::srv::SetProfile>::SharedPtr set_profile_service_;
 
+        // ========== Publishers ==========
         rclcpp::Publisher<unitree_interface_msgs::msg::ControlMode>::SharedPtr current_mode_pub_;
         rclcpp::Publisher<unitree_interface_msgs::msg::Profile>::SharedPtr current_profile_pub_;
         rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_pub_;
 
+        // ========== Subscriptions ==========
         rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr cmd_vel_sub_;
         rclcpp::Subscription<std_msgs::msg::String>::SharedPtr tts_sub_;
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr cmd_arm_sub_;
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr cmd_low_sub_;
-#endif
         rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr estop_sub_;
     };
 

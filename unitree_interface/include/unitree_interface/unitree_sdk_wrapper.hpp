@@ -172,6 +172,8 @@ namespace unitree_interface {
 
         mutable std::mutex position_mutex_;
         std::array<float, joints::num_joints> actual_position_{};
+
+        mutable std::mutex integral_mutex_;
         std::array<float, joints::num_joints> integral_error_{};
 
         unitree::robot::ChannelPublisherPtr<LowCmd> arm_sdk_pub_;

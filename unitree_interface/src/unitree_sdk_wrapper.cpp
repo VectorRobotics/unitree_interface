@@ -424,13 +424,16 @@ namespace unitree_interface {
         std::vector<float> adjusted_effort;
         adjusted_effort.reserve(effort.size());
 
-        for (std::size_t i = 0; i < indices.size(); ++i) {
-            const auto joint_index = indices[i];
+        {
+            std::lock_guard lock(integral_mutex_);
+            for (std::size_t i = 0; i < indices.size(); ++i) {
+                const auto joint_index = indices[i];
 
-            const auto error = position[i] - actual_pos[joint_index];
-            integral_error_[joint_index] += error;
+                const auto error = position[i] - actual_pos[joint_index];
+                integral_error_[joint_index] += error;
 
-            adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index]);
+                adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index]);
+            }
         }
 
         auto command = construct_low_cmd(
@@ -469,13 +472,16 @@ namespace unitree_interface {
         std::vector<float> adjusted_effort;
         adjusted_effort.reserve(effort.size());
 
-        for (std::size_t i = 0; i < indices.size(); ++i) {
-            const auto joint_index = indices[i];
+        {
+            std::lock_guard lock(integral_mutex_);
+            for (std::size_t i = 0; i < indices.size(); ++i) {
+                const auto joint_index = indices[i];
 
-            const auto error = position[i] - actual_pos[joint_index];
-            integral_error_[joint_index] += error;
+                const auto error = position[i] - actual_pos[joint_index];
+                integral_error_[joint_index] += error;
 
-            adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index]);
+                adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index]);
+            }
         }
 
         auto command = construct_low_cmd(
@@ -538,7 +544,10 @@ namespace unitree_interface {
     }
 
     void UnitreeSDKWrapper::reset_integral_error() {
-        integral_error_.fill(0.0F);
+        {
+            std::lock_guard lock(integral_mutex_);
+            integral_error_.fill(0.0F);
+        }
         RCLCPP_INFO(logger_, "Integral error reset");
     }
 

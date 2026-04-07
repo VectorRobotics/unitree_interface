@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 project(unitree_interface)
 
-# Options
-option(ENABLE_LOW_LEVEL_MODE "Enable LowLevelMode usage" ON)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_BUILD_TYPE Release)
@@ -55,11 +52,6 @@ ament_target_dependencies(unitree_interface_lib
   std_srvs
   unitree_interface_msgs
   dynamic_params
-)
-
-target_compile_definitions(unitree_interface_lib
-  PUBLIC
-    $<$<BOOL:${ENABLE_LOW_LEVEL_MODE}>:UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE>
 )
 
 # Create the executable

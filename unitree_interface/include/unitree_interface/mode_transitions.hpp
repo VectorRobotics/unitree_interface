@@ -37,14 +37,12 @@ namespace unitree_interface {
         static ControlMode execute(UnitreeSDKWrapper& sdk_wrapper);
     };
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     template <>
     struct Transition<IdleMode, LowLevelMode> {
         static constexpr bool allowed = true;
 
         static ControlMode execute(UnitreeSDKWrapper& sdk_wrapper);
     };
-#endif
 
     template <>
     struct Transition<IdleMode, EmergencyMode> {
@@ -61,14 +59,12 @@ namespace unitree_interface {
         static ControlMode execute(UnitreeSDKWrapper&);
     };
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     template <>
     struct Transition<HighLevelMode, LowLevelMode> {
         static constexpr bool allowed = true;
 
         static ControlMode execute(UnitreeSDKWrapper& sdk_wrapper);
     };
-#endif
 
     template <>
     struct Transition<HighLevelMode, EmergencyMode> {
@@ -77,7 +73,6 @@ namespace unitree_interface {
         static ControlMode execute(UnitreeSDKWrapper& sdk_wrapper);
     };
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     // ========== LowLevelMode ==========
     template <>
     struct Transition<LowLevelMode, IdleMode> {
@@ -99,7 +94,6 @@ namespace unitree_interface {
 
         static ControlMode execute(UnitreeSDKWrapper& sdk_wrapper);
     };
-#endif
 
     // ========== Helper functions ==========
     using TransitionResult = std::pair<ControlMode, bool>;
