@@ -253,30 +253,20 @@ namespace unitree_interface {
             return;
         }
 
-        std::vector<std::uint8_t> indices;
-        std::vector<float> position;
-        std::vector<float> velocity;
-        std::vector<float> effort;
-        std::vector<float> kp;
-        std::vector<float> kd;
+        std::array<bool, embodiment::num_joints> active{};
+        const std::array<float, embodiment::num_joints> zeros{};
 
         for (const auto& joint : embodiment::all_joints) {
-            const auto index = static_cast<std::uint8_t>(joint);
-            indices.push_back(index);
-            position.push_back(0.0F);
-            velocity.push_back(0.0F);
-            effort.push_back(0.0F);
-            kp.push_back(Damp::kp[index]);
-            kd.push_back(Damp::kd[index]);
+            active[static_cast<std::uint8_t>(joint)] = true;
         }
 
         auto command = construct_low_cmd(
-            indices,
-            position,
-            velocity,
-            effort,
-            kp,
-            kd
+            active,
+            zeros,
+            zeros,
+            zeros,
+            Damp::kp,
+            Damp::kd
         );
 
         low_cmd_pub_->Write(command);
@@ -346,35 +336,28 @@ namespace unitree_interface {
         const float weight_per_step = 1.0F / static_cast<float>(steps);
         const auto interval = std::chrono::milliseconds(interval_ms);
 
-        std::vector<std::uint8_t> hold_indices;
-        std::vector<float> hold_position;
-        std::vector<float> hold_velocity;
-        std::vector<float> hold_effort;
-        std::vector<float> hold_kp;
-        std::vector<float> hold_kd;
+        std::array<bool, embodiment::num_joints> active{};
+        std::array<float, embodiment::num_joints> hold_position{};
+        const std::array<float, embodiment::num_joints> zeros{};
 
         {
             std::lock_guard lock(position_mutex_);
             for (const auto& joint : embodiment::upper_body) {
                 const auto index = static_cast<std::uint8_t>(joint);
-                hold_indices.push_back(index);
-                hold_position.push_back(actual_position_[index]);
-                hold_velocity.push_back(0.0F);
-                hold_effort.push_back(0.0F);
-                hold_kp.push_back(Default::kp[index]);
-                hold_kd.push_back(Default::kd[index]);
+                active[index] = true;
+                hold_position[index] = actual_position_[index];
             }
         }
 
         for (int i = 0; i <= steps; ++i) {
             const float weight = 1.0F - (static_cast<float>(i) * weight_per_step);
             auto command = construct_low_cmd(
-                hold_indices,
+                active,
                 hold_position,
-                hold_velocity,
-                hold_effort,
-                hold_kp,
-                hold_kd,
+                zeros,
+                zeros,
+                Default::kp,
+                Default::kd,
                 weight
             );
 
@@ -388,12 +371,12 @@ namespace unitree_interface {
 
     // ========== Low-level capabilities ==========
     LowCmd UnitreeSDKWrapper::construct_low_cmd(
-        const std::vector<std::uint8_t>& indices,
-        const std::vector<float>& position,
-        const std::vector<float>& velocity,
-        const std::vector<float>& effort,
-        const std::vector<float>& kp,
-        const std::vector<float>& kd,
+        const std::array<bool, embodiment::num_joints>& active,
+        const std::array<float, embodiment::num_joints>& position,
+        const std::array<float, embodiment::num_joints>& velocity,
+        const std::array<float, embodiment::num_joints>& effort,
+        const std::array<float, embodiment::num_joints>& kp,
+        const std::array<float, embodiment::num_joints>& kd,
         const float weight
     ) {
         LowCmd command{};
@@ -403,15 +386,15 @@ namespace unitree_interface {
 
         command.motor_cmd().at(static_cast<std::uint8_t>(embodiment::JointIndex::WeightParameter)).q() = weight;
 
-        for (std::size_t i = 0; i < indices.size(); ++i) {
-            const auto joint_index = indices[i];
+        for (std::size_t i = 0; i < embodiment::num_joints; ++i) {
+            if (!active[i]) { continue; }
 
-            command.motor_cmd().at(joint_index).mode() = 1;
-            command.motor_cmd().at(joint_index).q()    = position[i];
-            command.motor_cmd().at(joint_index).dq()   = velocity[i];
-            command.motor_cmd().at(joint_index).tau()  = std::clamp(effort[i], -embodiment::effort_limit[joint_index], embodiment::effort_limit[joint_index]);
-            command.motor_cmd().at(joint_index).kp()   = kp[i];
-            command.motor_cmd().at(joint_index).kd()   = kd[i];
+            command.motor_cmd().at(i).mode() = 1;
+            command.motor_cmd().at(i).q()    = position[i];
+            command.motor_cmd().at(i).dq()   = velocity[i];
+            command.motor_cmd().at(i).tau()   = std::clamp(effort[i], -embodiment::effort_limit[i], embodiment::effort_limit[i]);
+            command.motor_cmd().at(i).kp()   = kp[i];
+            command.motor_cmd().at(i).kd()   = kd[i];
         }
 
         static_assert(sizeof(LowCmd) % 4 == 0);
@@ -427,13 +410,13 @@ namespace unitree_interface {
     }
 
     void UnitreeSDKWrapper::send_arm_commands(
-        const std::vector<std::uint8_t>& indices,
-        const std::vector<float>& position,
-        const std::vector<float>& velocity,
-        const std::vector<float>& effort,
-        const std::vector<float>& kp,
-        const std::vector<float>& kd,
-        const std::vector<float>& ki
+        const std::array<bool, embodiment::num_joints>& active,
+        const std::array<float, embodiment::num_joints>& position,
+        const std::array<float, embodiment::num_joints>& velocity,
+        const std::array<float, embodiment::num_joints>& effort,
+        const std::array<float, embodiment::num_joints>& kp,
+        const std::array<float, embodiment::num_joints>& kd,
+        const std::array<float, embodiment::num_joints>& ki
     ) {
         if (!initialized_ || !arm_sdk_pub_) {
             RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
@@ -446,23 +429,22 @@ namespace unitree_interface {
             actual_pos = actual_position_;
         }
 
-        std::vector<float> adjusted_effort;
-        adjusted_effort.reserve(effort.size());
+        std::array<float, embodiment::num_joints> adjusted_effort = effort;
 
         {
             std::lock_guard lock(integral_mutex_);
-            for (std::size_t i = 0; i < indices.size(); ++i) {
-                const auto joint_index = indices[i];
+            for (std::size_t i = 0; i < embodiment::num_joints; ++i) {
+                if (!active[i]) { continue; }
 
-                const auto error = position[i] - actual_pos[joint_index];
-                integral_error_[joint_index] += error;
+                const auto error = position[i] - actual_pos[i];
+                integral_error_[i] += error;
 
-                adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index]);
+                adjusted_effort[i] += ki[i] * integral_error_[i];
             }
         }
 
         auto command = construct_low_cmd(
-            indices,
+            active,
             position,
             velocity,
             adjusted_effort,
@@ -475,13 +457,13 @@ namespace unitree_interface {
     }
 
     void UnitreeSDKWrapper::send_low_commands(
-        const std::vector<std::uint8_t>& indices,
-        const std::vector<float>& position,
-        const std::vector<float>& velocity,
-        const std::vector<float>& effort,
-        const std::vector<float>& kp,
-        const std::vector<float>& kd,
-        const std::vector<float>& ki
+        const std::array<bool, embodiment::num_joints>& active,
+        const std::array<float, embodiment::num_joints>& position,
+        const std::array<float, embodiment::num_joints>& velocity,
+        const std::array<float, embodiment::num_joints>& effort,
+        const std::array<float, embodiment::num_joints>& kp,
+        const std::array<float, embodiment::num_joints>& kd,
+        const std::array<float, embodiment::num_joints>& ki
     ) {
         if (!initialized_ || !low_cmd_pub_) {
             RCLCPP_ERROR(logger_, "UnitreeSDKWrapper not initialized");
@@ -494,23 +476,22 @@ namespace unitree_interface {
             actual_pos = actual_position_;
         }
 
-        std::vector<float> adjusted_effort;
-        adjusted_effort.reserve(effort.size());
+        std::array<float, embodiment::num_joints> adjusted_effort = effort;
 
         {
             std::lock_guard lock(integral_mutex_);
-            for (std::size_t i = 0; i < indices.size(); ++i) {
-                const auto joint_index = indices[i];
+            for (std::size_t i = 0; i < embodiment::num_joints; ++i) {
+                if (!active[i]) { continue; }
 
-                const auto error = position[i] - actual_pos[joint_index];
-                integral_error_[joint_index] += error;
+                const auto error = position[i] - actual_pos[i];
+                integral_error_[i] += error;
 
-                adjusted_effort.push_back(effort[i] + ki[i] * integral_error_[joint_index]);
+                adjusted_effort[i] += ki[i] * integral_error_[i];
             }
         }
 
         auto command = construct_low_cmd(
-            indices,
+            active,
             position,
             velocity,
             adjusted_effort,

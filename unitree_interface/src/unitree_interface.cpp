@@ -713,41 +713,23 @@ namespace unitree_interface {
             ki_snapshot = current_ki_;
         }
 
-        {
-            auto [indices, position, velocity, effort, kp, kd, ki] =
-                embodiment::resolve_joint_commands(
-                    message->name,
-                    message->position,
-                    message->velocity,
-                    message->effort,
-                    kp_snapshot,
-                    kd_snapshot,
-                    ki_snapshot
-                );
+        auto cmd = embodiment::resolve_names(
+            message->name,
+            message->position,
+            message->velocity,
+            message->effort,
+            embodiment::upper_body
+        );
 
-            for (std::size_t i = 0; i < indices.size(); ++i) {
-                const auto joint_index = static_cast<embodiment::JointIndex>(indices[i]);
-
-                if (!embodiment::contains(embodiment::upper_body, joint_index)) {
-                    position[i] = 0.0F;
-                    velocity[i] = 0.0F;
-                    effort[i] = 0.0F;
-                    kp[i] = 0.0F;
-                    kd[i] = 0.0F;
-                    ki[i] = 0.0F;
-                }
-            }
-
-            sdk_wrapper_->send_arm_commands(
-                indices,
-                position,
-                velocity,
-                effort,
-                kp,
-                kd,
-                ki
-            );
-        }
+        sdk_wrapper_->send_arm_commands(
+            cmd.active,
+            cmd.position,
+            cmd.velocity,
+            cmd.effort,
+            kp_snapshot,
+            kd_snapshot,
+            ki_snapshot
+        );
     }
 
     void UnitreeInterface::cmd_low_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
@@ -771,25 +753,22 @@ namespace unitree_interface {
             ki_snapshot = current_ki_;
         }
 
-        auto [indices, position, velocity, effort, kp, kd, ki] =
-            embodiment::resolve_joint_commands(
-                message->name,
-                message->position,
-                message->velocity,
-                message->effort,
-                kp_snapshot,
-                kd_snapshot,
-                ki_snapshot
-            );
+        auto cmd = embodiment::resolve_names(
+            message->name,
+            message->position,
+            message->velocity,
+            message->effort,
+            embodiment::all_joints
+        );
 
         sdk_wrapper_->send_low_commands(
-            indices,
-            position,
-            velocity,
-            effort,
-            kp,
-            kd,
-            ki
+            cmd.active,
+            cmd.position,
+            cmd.velocity,
+            cmd.effort,
+            kp_snapshot,
+            kd_snapshot,
+            ki_snapshot
         );
     }
 

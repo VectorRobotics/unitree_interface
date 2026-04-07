@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <tuple>
+#include <unordered_map>
 #include <vector>
 
 namespace unitree_interface {
@@ -242,75 +242,51 @@ namespace unitree_interface {
         }
 
         inline std::optional<JointIndex> from_name(const std::string& name) {
-            for (std::size_t i = 0; i < num_joints; ++i) {
-                if (name == joint_names[i]) {
-                    return static_cast<JointIndex>(i);
+            static const auto lookup = [] {
+                std::unordered_map<std::string, JointIndex> map;
+                for (std::size_t i = 0; i < num_joints; ++i) {
+                    map[joint_names[i]] = static_cast<JointIndex>(i);
                 }
-            }
-            return std::nullopt;
+                return map;
+            }();
+
+            const auto it = lookup.find(name);
+            return (it != lookup.end()) ? std::optional{it->second} : std::nullopt;
         }
 
         // ========== Conversion ==========
-        inline
-        std::tuple<
-            std::vector<std::uint8_t>,
-            std::vector<float>,
-            std::vector<float>,
-            std::vector<float>,
-            std::vector<float>,
-            std::vector<float>,
-            std::vector<float>
-        >
-        resolve_joint_commands(
+        struct ResolvedCommand {
+            std::array<bool, num_joints> active{};
+            std::array<float, num_joints> position{};
+            std::array<float, num_joints> velocity{};
+            std::array<float, num_joints> effort{};
+        };
+
+        template <std::size_t N>
+        inline ResolvedCommand resolve_names(
             const std::vector<std::string>& names,
             const std::vector<double>& position,
             const std::vector<double>& velocity,
             const std::vector<double>& effort,
-            const std::array<float, num_joints>& profile_kp,
-            const std::array<float, num_joints>& profile_kd,
-            const std::array<float, num_joints>& profile_ki
+            const std::array<JointIndex, N>& allowed_group
         ) {
-            const std::size_t n = names.size();
+            ResolvedCommand cmd;
 
-            std::vector<std::uint8_t> indices{};
-            std::vector<float> pos{};
-            std::vector<float> vel{};
-            std::vector<float> eff{};
-            std::vector<float> kp{};
-            std::vector<float> kd{};
-            std::vector<float> ki{};
+            for (std::size_t i = 0; i < names.size(); ++i) {
+                const auto joint_index = from_name(names[i]);
 
-            indices.reserve(n);
-            pos.reserve(n);
-            vel.reserve(n);
-            eff.reserve(n);
-            kp.reserve(n);
-            kd.reserve(n);
-            ki.reserve(n);
+                if (!joint_index.has_value()) { continue; }
+                if (!contains(allowed_group, *joint_index)) { continue; }
 
-            for (std::size_t i = 0; i < n; ++i) {
-                auto joint_index = from_name(names[i]);
-
-                // Skip unresolved names
-                if (!joint_index.has_value()) {
-                    continue;
-                }
-
-                // Narrow doubles to floats
                 const auto index = static_cast<std::uint8_t>(*joint_index);
 
-                indices.push_back(index);
-
-                pos.push_back(i < position.size() ? static_cast<float>(position[i]) : 0.0F);
-                vel.push_back(i < velocity.size() ? static_cast<float>(velocity[i]) : 0.0F);
-                eff.push_back(i < effort.size()   ? static_cast<float>(effort[i])   : 0.0F);
-
-                kp.push_back(profile_kp[index]);
-                kd.push_back(profile_kd[index]);
-                ki.push_back(profile_ki[index]);
+                cmd.active[index] = true;
+                cmd.position[index] = (i < position.size()) ? static_cast<float>(position[i]) : 0.0F;
+                cmd.velocity[index] = (i < velocity.size()) ? static_cast<float>(velocity[i]) : 0.0F;
+                cmd.effort[index]   = (i < effort.size())   ? static_cast<float>(effort[i])   : 0.0F;
             }
 
-            return {indices, pos, vel, eff, kp, kd, ki};
+            return cmd;
         }
 
     } // namespace embodiment

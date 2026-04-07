@@ -102,13 +102,13 @@ namespace unitree_interface {
         bool start();
 
         void send_arm_commands(
-            const std::vector<std::uint8_t>& indices,
-            const std::vector<float>& position,
-            const std::vector<float>& velocity,
-            const std::vector<float>& effort,
-            const std::vector<float>& kp,
-            const std::vector<float>& kd,
-            const std::vector<float>& ki
+            const std::array<bool, embodiment::num_joints>& active,
+            const std::array<float, embodiment::num_joints>& position,
+            const std::array<float, embodiment::num_joints>& velocity,
+            const std::array<float, embodiment::num_joints>& effort,
+            const std::array<float, embodiment::num_joints>& kp,
+            const std::array<float, embodiment::num_joints>& kd,
+            const std::array<float, embodiment::num_joints>& ki
         );
 
         void release_arms(int steps, int interval_ms);
@@ -117,13 +117,13 @@ namespace unitree_interface {
         void damp_low();
 
         void send_low_commands(
-            const std::vector<std::uint8_t>& indices,
-            const std::vector<float>& position,
-            const std::vector<float>& velocity,
-            const std::vector<float>& effort,
-            const std::vector<float>& kp,
-            const std::vector<float>& kd,
-            const std::vector<float>& ki
+            const std::array<bool, embodiment::num_joints>& active,
+            const std::array<float, embodiment::num_joints>& position,
+            const std::array<float, embodiment::num_joints>& velocity,
+            const std::array<float, embodiment::num_joints>& effort,
+            const std::array<float, embodiment::num_joints>& kp,
+            const std::array<float, embodiment::num_joints>& kd,
+            const std::array<float, embodiment::num_joints>& ki
         );
 
         // ========== Hand capabilities ==========
@@ -159,12 +159,12 @@ namespace unitree_interface {
 
         // ========== Low-level capabilities ==========
         LowCmd construct_low_cmd(
-            const std::vector<std::uint8_t>& indices,
-            const std::vector<float>& position,
-            const std::vector<float>& velocity,
-            const std::vector<float>& effort,
-            const std::vector<float>& kp,
-            const std::vector<float>& kd,
+            const std::array<bool, embodiment::num_joints>& active,
+            const std::array<float, embodiment::num_joints>& position,
+            const std::array<float, embodiment::num_joints>& velocity,
+            const std::array<float, embodiment::num_joints>& effort,
+            const std::array<float, embodiment::num_joints>& kp,
+            const std::array<float, embodiment::num_joints>& kd,
             float weight = 0.0F
         );
 
