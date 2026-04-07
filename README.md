@@ -28,9 +28,9 @@ ROS 2 interface for the Unitree G1 humanoid robot (29 DoF). Bridges the Unitree 
 
 | Topic | Type | Mode | Description |
 |-------|------|------|-------------|
-| `~/cmd_vel` | `geometry_msgs/msg/Twist` | HighLevelMode | Velocity commands (linear.x, linear.y, angular.z). |
+| `~/cmd_vel` | `geometry_msgs/msg/TwistStamped` | HighLevelMode | Velocity commands (twist.linear.x, twist.linear.y, twist.angular.z). |
 | `~/cmd_arm` | `sensor_msgs/msg/JointState` | HighLevelMode | Arm joint commands via `rt/arm_sdk`. Uses URDF joint names for upper body joints (arms + waist). Position, velocity, and effort fields are used. Motor kp/kd are set by the active gain profile. |
-| `~/cmd_low` | `sensor_msgs/msg/JointState` | LowLevelMode | Direct low-level motor commands for all 29 joints. Requires `UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE` at build time. |
+| `~/cmd_low` | `sensor_msgs/msg/JointState` | LowLevelMode | Direct low-level motor commands for all 29 joints. |
 | `/estop` | `std_msgs/msg/Empty` | Any | Emergency stop. Transitions to EmergencyMode (damps all joints). Global topic. |
 | `~/tts` | `std_msgs/msg/String` | Any | Text-to-speech via the robot's speaker. |
 
@@ -167,7 +167,7 @@ ros2 service call /unitree_interface/set_profile unitree_interface_msgs/srv/SetP
 Send a velocity command:
 
 ```bash
-ros2 topic pub --once /unitree_interface/cmd_vel geometry_msgs/msg/Twist "{linear: {x: 1.15, y: 0.0}, angular: {z: 0.0}}"
+ros2 topic pub --once /unitree_interface/cmd_vel geometry_msgs/msg/TwistStamped "{twist: {linear: {x: 1.15, y: 0.0}, angular: {z: 0.0}}}"
 ```
 
 Send a text-to-speech command:
