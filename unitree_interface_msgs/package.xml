@@ -3,9 +3,9 @@
 <package format="3">
   <name>unitree_interface_msgs</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Msg/Srv definitions for unitree_interface</description>
   <maintainer email="kkhanna.rdl@gmail.com">glonks</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
