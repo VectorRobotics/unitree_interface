@@ -42,22 +42,22 @@ namespace unitree_interface {
             150.0F,
 
             // Left arm
-            18.0F,
-            18.0F,
-            18.0F,
-            18.0F,
-            18.0F,
-            18.0F,
-            18.0F,
+            80.0F,
+            80.0F,
+            80.0F,
+            150.0F,
+            40.0F,
+            40.0F,
+            40.0F,
 
             // Right arm
-            18.0F,
-            18.0F,
-            18.0F,
-            18.0F,
-            18.0F,
-            18.0F,
-            18.0F,
+            80.0F,
+            80.0F,
+            80.0F,
+            150.0F,
+            40.0F,
+            40.0F,
+            40.0F
         };
 
         static constexpr std::array<float, embodiment::num_joints> kd {
@@ -83,22 +83,22 @@ namespace unitree_interface {
             2.0F,
 
             // Left arm
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
+            4.0F,
+            4.0F,
+            4.0F,
+            4.0F,
+            1.5F,
+            1.5F,
+            1.5F,
 
             // Right arm
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
-            2.0F,
+            4.0F,
+            4.0F,
+            4.0F,
+            4.0F,
+            1.5F,
+            1.5F,
+            1.5F,
         };
 
         static constexpr std::array<float, embodiment::num_joints> ki {};
@@ -197,22 +197,22 @@ namespace unitree_interface {
             0.0F,
 
             // Left arm
-            3.0F,
-            15.0F,
-            15.0F,
-            15.0F,
-            15.0F,
-            15.0F,
-            15.0F,
+            100.0F,
+            100.0F,
+            60.0F,
+            150.0F,
+            100.0F,
+            60.0F,
+            60.0F,
 
             // Right arm
-            3.0F,
-            15.0F,
-            15.0F,
-            15.0F,
-            15.0F,
-            15.0F,
-            15.0F,
+            100.0F,
+            100.0F,
+            60.0F,
+            150.0F,
+            100.0F,
+            60.0F,
+            60.0F,
         };
     };
 
