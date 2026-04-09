@@ -450,13 +450,13 @@ namespace unitree_interface {
 
                 // Trapezoidal integration with dead zone
                 if (abs_error >= integral_dead_zone_min_ && abs_error < integral_dead_zone_max_) {
-                    integral_error_[i] += 0.5F * (error + previous_error_[i]);
+                    integral_error_[i] += ki[i] * 0.5F * (error + previous_error_[i]);
                 }
                 previous_error_[i] = error;
 
                 integral_error_[i] = std::clamp(integral_error_[i], -integral_clamp_, integral_clamp_);
                 adjusted_effort[i] = std::clamp(
-                    adjusted_effort[i] + ki[i] * integral_error_[i] * dt,
+                    adjusted_effort[i] + integral_error_[i] * dt,
                     -embodiment::effort_limit[i],
                     embodiment::effort_limit[i]
                 );
