@@ -33,16 +33,32 @@ int main(int argc, char* argv[]) {
     }
 
     const auto n = msg.name.size();
-    msg.position.assign(n, 0.0);
+    msg.position.resize(n, 0.0);
     msg.velocity.assign(n, 0.0);
     msg.effort.assign(n, 0.0);
+
+    // Declare position setpoint parameters for each arm joint
+    for (const auto& joint : embodiment::arms) {
+        const auto name = embodiment::to_name(joint);
+        node->declare_parameter(name, 0.0);
+    }
+
+
 
     const auto period = std::chrono::duration<double>(1.0 / rate_hz);
 
     auto timer = node->create_wall_timer(
         std::chrono::duration_cast<std::chrono::nanoseconds>(period),
-        [&pub, &msg, &node]() {
+        [&pub, &msg, &node, n]() {
             msg.header.stamp = node->now();
+            // Read arm joint position setpoints from parameters
+            for (std::size_t i = 0; i < n; ++i) {
+                const auto& name = msg.name[i];
+                auto idx = embodiment::from_name(name);
+                if (idx.has_value() && embodiment::contains(embodiment::arms, *idx)) {
+                    msg.position[i] = node->get_parameter(name).as_double();
+                }
+            }
             pub->publish(msg);
         }
     );
