@@ -59,7 +59,7 @@ namespace unitree_interface {
             params_.declare(
                 prefix + "ki/" + embodiment::joint_names[i],
                 static_cast<double>(ProfileType::ki[i]),
-                FloatRange{0.0, 20.0},
+                FloatRange{0.0, 200.0},
                 "",
                 dynamic,
                 [this, i](const rclcpp::Parameter& param) {
@@ -121,7 +121,7 @@ namespace unitree_interface {
         params_.declare("controller_frequency_hz", 500, IntRange{100, 1000}, "", false);
         params_.declare("integral_dead_zone_min", 0, FloatRange{0.0, 0.1}, "", false);
         params_.declare("integral_dead_zone_max", 0.2, FloatRange{0.01, 2.0}, "", false);
-        params_.declare("integral_clamp", 1000.0, FloatRange{1.0, 10000.0}, "", false);
+        params_.declare("integral_clamp", 3000.0, FloatRange{1.0, 10000.0}, "", false);
 
         // ========== Gain parameters (per-profile) ==========
         declare_profile_gains<Default>();
