@@ -18,6 +18,7 @@ set(msg_files
 set(srv_files
   "srv/ChangeControlMode.srv"
   "srv/SetProfile.srv"
+  "srv/SetHandPose.srv"
 )
 
 rosidl_generate_interfaces(unitree_interface_msgs

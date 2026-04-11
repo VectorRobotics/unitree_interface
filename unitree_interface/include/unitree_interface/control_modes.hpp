@@ -43,7 +43,6 @@ namespace unitree_interface {
         static constexpr const char* name() { return "HighLevel"; }
     };
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     // ========== LowLevelMode ==========
     struct LowLevelMode {};
 
@@ -53,7 +52,6 @@ namespace unitree_interface {
 
         static constexpr const char* name() { return "LowLevel"; }
     };
-#endif
 
     // ========== EmergencyMode ==========
     struct EmergencyMode {};
@@ -70,9 +68,7 @@ namespace unitree_interface {
         std::monostate,
         IdleMode,
         HighLevelMode,
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         LowLevelMode,
-#endif
         EmergencyMode
     >;
     // clang-format on

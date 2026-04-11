@@ -7,6 +7,8 @@
 #include <unitree/robot/channel/channel_subscriber.hpp>
 #include <unitree/idl/hg/LowCmd_.hpp>
 #include <unitree/idl/hg/LowState_.hpp>
+#include <unitree/idl/hg/HandCmd_.hpp>
+#include <unitree/idl/hg/HandState_.hpp>
 
 #include <rclcpp/logger.hpp>
 #include <rclcpp/publisher.hpp>
@@ -15,7 +17,6 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <vector>
 
 // ========== Forward declarations ==========
 namespace rclcpp {
@@ -36,11 +37,16 @@ namespace unitree_interface {
     // ========== Aliases ==========
     using LowCmd = unitree_hg::msg::dds_::LowCmd_;
     using LowState = unitree_hg::msg::dds_::LowState_;
+    using HandCmd = unitree_hg::msg::dds_::HandCmd_;
+    using HandState = unitree_hg::msg::dds_::HandState_;
 
     class UnitreeSDKWrapper {
     public:
         explicit UnitreeSDKWrapper(
-            rclcpp::Logger logger
+            rclcpp::Logger logger,
+            float integral_dead_zone_min,
+            float integral_dead_zone_max,
+            float integral_clamp
         );
 
         // Can't copy
@@ -98,13 +104,14 @@ namespace unitree_interface {
         bool start();
 
         void send_arm_commands(
-            const std::vector<std::uint8_t>& indices,
-            const std::vector<float>& position,
-            const std::vector<float>& velocity,
-            const std::vector<float>& effort,
-            const std::vector<float>& kp,
-            const std::vector<float>& kd,
-            const std::vector<float>& ki
+            const std::array<bool, embodiment::num_joints>& active,
+            const std::array<float, embodiment::num_joints>& position,
+            const std::array<float, embodiment::num_joints>& velocity,
+            const std::array<float, embodiment::num_joints>& effort,
+            const std::array<float, embodiment::num_joints>& kp,
+            const std::array<float, embodiment::num_joints>& kd,
+            const std::array<float, embodiment::num_joints>& ki,
+            float dt
         );
 
         void release_arms(int steps, int interval_ms);
@@ -113,13 +120,26 @@ namespace unitree_interface {
         void damp_low();
 
         void send_low_commands(
-            const std::vector<std::uint8_t>& indices,
-            const std::vector<float>& position,
-            const std::vector<float>& velocity,
-            const std::vector<float>& effort,
-            const std::vector<float>& kp,
-            const std::vector<float>& kd,
-            const std::vector<float>& ki
+            const std::array<bool, embodiment::num_joints>& active,
+            const std::array<float, embodiment::num_joints>& position,
+            const std::array<float, embodiment::num_joints>& velocity,
+            const std::array<float, embodiment::num_joints>& effort,
+            const std::array<float, embodiment::num_joints>& kp,
+            const std::array<float, embodiment::num_joints>& kd,
+            const std::array<float, embodiment::num_joints>& ki
+        );
+
+        // ========== Hand capabilities ==========
+        void send_hand_command(
+            hands::Side side,
+            const std::array<float, hands::num_joints>& positions
+        );
+
+        std::array<float, hands::num_joints> get_hand_position(hands::Side side);
+
+        void set_hand_states_publishers(
+            rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr left_pub,
+            rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr right_pub
         );
 
         // ========== Audio capabilities ==========
@@ -138,23 +158,31 @@ namespace unitree_interface {
 
         void initialize_low_level_machinery();
 
+        void initialize_hand_machinery();
+
         // ========== Low-level capabilities ==========
         LowCmd construct_low_cmd(
-            const std::vector<std::uint8_t>& indices,
-            const std::vector<float>& position,
-            const std::vector<float>& velocity,
-            const std::vector<float>& effort,
-            const std::vector<float>& kp,
-            const std::vector<float>& kd,
+            const std::array<bool, embodiment::num_joints>& active,
+            const std::array<float, embodiment::num_joints>& position,
+            const std::array<float, embodiment::num_joints>& velocity,
+            const std::array<float, embodiment::num_joints>& effort,
+            const std::array<float, embodiment::num_joints>& kp,
+            const std::array<float, embodiment::num_joints>& kd,
             float weight = 0.0F
         );
 
         // ========== Callbacks ==========
         void low_state_callback(const void* message);
+        void left_hand_state_callback(const void* message);
+        void right_hand_state_callback(const void* message);
 
         // ========== Member variables ==========
         rclcpp::Logger logger_;
         bool initialized_{false};
+
+        const float integral_dead_zone_min_;
+        const float integral_dead_zone_max_;
+        const float integral_clamp_;
 
         // ========== Clients ==========
         std::unique_ptr<unitree::robot::b2::MotionSwitcherClient> msc_;
@@ -171,12 +199,33 @@ namespace unitree_interface {
         std::uint8_t mode_machine_{0};
 
         mutable std::mutex position_mutex_;
-        std::array<float, joints::num_joints> actual_position_{};
-        std::array<float, joints::num_joints> integral_error_{};
+        std::array<float, embodiment::num_joints> actual_position_{};
+
+        mutable std::mutex integral_mutex_;
+        std::array<float, embodiment::num_joints> integral_term_{};
+        std::array<float, embodiment::num_joints> previous_error_{};
 
         unitree::robot::ChannelPublisherPtr<LowCmd> arm_sdk_pub_;
         unitree::robot::ChannelPublisherPtr<LowCmd> low_cmd_pub_;
         unitree::robot::ChannelSubscriberPtr<LowState> low_state_sub_;
+
+        // ========== Hand stuff ==========
+        const std::string left_hand_cmd_topic_{"rt/dex3/left/cmd"};
+        const std::string right_hand_cmd_topic_{"rt/dex3/right/cmd"};
+        const std::string left_hand_state_topic_{"rt/lf/dex3/left/state"};
+        const std::string right_hand_state_topic_{"rt/lf/dex3/right/state"};
+
+        mutable std::mutex hand_position_mutex_;
+        std::array<float, hands::num_joints> left_hand_position_{};
+        std::array<float, hands::num_joints> right_hand_position_{};
+
+        unitree::robot::ChannelPublisherPtr<HandCmd> left_hand_cmd_pub_;
+        unitree::robot::ChannelPublisherPtr<HandCmd> right_hand_cmd_pub_;
+        unitree::robot::ChannelSubscriberPtr<HandState> left_hand_state_sub_;
+        unitree::robot::ChannelSubscriberPtr<HandState> right_hand_state_sub_;
+
+        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr left_hand_states_pub_;
+        rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr right_hand_states_pub_;
 
         rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_pub_;
     };

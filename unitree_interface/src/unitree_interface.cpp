@@ -15,6 +15,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <tuple>
 
 namespace unitree_interface {
 
@@ -24,42 +25,48 @@ namespace unitree_interface {
 
         const std::string prefix = std::string(ProfileTraits<ProfileType>::name()) + "/";
 
-        for (std::size_t i = 0; i < joints::num_joints; ++i) {
+        for (std::size_t i = 0; i < embodiment::num_joints; ++i) {
             params_.declare(
-                prefix + "kp/" + joints::joint_names[i],
+                prefix + "kp/" + embodiment::joint_names[i],
                 static_cast<double>(ProfileType::kp[i]),
                 FloatRange{0.0, 200.0},
                 "",
                 dynamic,
-                [this, i](const rclcpp::Parameter& p) {
+                [this, i](const rclcpp::Parameter& param) {
+                    std::unique_lock lock(state_mutex_);
+
                     if (ProfileTraits<ProfileType>::id == get_active_profile_id()) {
-                        current_kp_[i] = static_cast<float>(p.as_double());
+                        current_kp_[i] = static_cast<float>(param.as_double());
                     }
                 }
             );
 
             params_.declare(
-                prefix + "kd/" + joints::joint_names[i],
+                prefix + "kd/" + embodiment::joint_names[i],
                 static_cast<double>(ProfileType::kd[i]),
                 FloatRange{0.0, 50.0},
                 "",
                 dynamic,
-                [this, i](const rclcpp::Parameter& p) {
+                [this, i](const rclcpp::Parameter& param) {
+                    std::unique_lock lock(state_mutex_);
+
                     if (ProfileTraits<ProfileType>::id == get_active_profile_id()) {
-                        current_kd_[i] = static_cast<float>(p.as_double());
+                        current_kd_[i] = static_cast<float>(param.as_double());
                     }
                 }
             );
 
             params_.declare(
-                prefix + "ki/" + joints::joint_names[i],
+                prefix + "ki/" + embodiment::joint_names[i],
                 static_cast<double>(ProfileType::ki[i]),
-                FloatRange{0.0, 12.0},
+                FloatRange{0.0, 200.0},
                 "",
                 dynamic,
-                [this, i](const rclcpp::Parameter& p) {
+                [this, i](const rclcpp::Parameter& param) {
+                    std::unique_lock lock(state_mutex_);
+
                     if (ProfileTraits<ProfileType>::id == get_active_profile_id()) {
-                        current_ki_[i] = static_cast<float>(p.as_double());
+                        current_ki_[i] = static_cast<float>(param.as_double());
                     }
                 }
             );
@@ -75,12 +82,19 @@ namespace unitree_interface {
         using dynamic_params::FloatRange;
         using dynamic_params::IntRange;
 
-        // ========== Static parameters ==========
+        // ========== Callback groups ==========
+        estop_cbg_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+        command_cbg_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+        service_cbg_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+        controller_cbg_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
+        // ========== Parameters ==========
         params_.declare("mode_change_service_name", "~/change_mode", "", false);
         params_.declare("ready_locomotion_service_name", "~/ready_locomotion", "", false);
         params_.declare("release_arms_service_name", "~/release_arms", "", false);
         params_.declare("reset_integral_error_service_name", "~/reset_integral_error", "", false);
         params_.declare("set_profile_service_name", "~/set_profile", "", false);
+        params_.declare("set_hand_pose_service_name", "~/set_hand_pose", "", false);
 
         params_.declare("current_mode_topic", "~/current_mode", "", false);
         params_.declare("current_profile_topic", "~/current_profile", "", false);
@@ -88,21 +102,26 @@ namespace unitree_interface {
         params_.declare("cmd_arm_topic", "~/cmd_arm", "", false);
         params_.declare("joint_states_topic", "~/joint_states", "", false);
         params_.declare("tts_topic", "~/tts", "", false);
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         params_.declare("cmd_low_topic", "~/cmd_low", "", false);
-#endif
         params_.declare("estop_topic", "/estop", "", false);
+        params_.declare("left_hand_states_topic", "~/left_hand_states", "", false);
+        params_.declare("right_hand_states_topic", "~/right_hand_states", "", false);
 
         params_.declare("motion_switcher_client_timeout", 5.0, FloatRange{1.0, 30.0, 0.5}, "", false);
         params_.declare("loco_client_timeout", 10.0, FloatRange{1.0, 30.0, 0.5}, "", false);
         params_.declare("audio_client_timeout", 5.0, FloatRange{1.0, 30.0, 0.5}, "", false);
 
-        // ========== Dynamic parameters ==========
-        params_.declare("volume", 100, IntRange{0, 100});
-        params_.declare("ready_locomotion_stand_up_delay", 5, IntRange{0, 30});
-        params_.declare("ready_locomotion_start_delay", 10, IntRange{0, 30});
-        params_.declare("release_arms_steps", 250, IntRange{1, 1000});
-        params_.declare("release_arms_interval_ms", 20, IntRange{1, 100});
+        params_.declare("volume", 100, IntRange{0, 100}, "", false);
+        params_.declare("ready_locomotion_stand_up_delay", 5, IntRange{0, 30}, "", false);
+        params_.declare("ready_locomotion_start_delay", 10, IntRange{0, 30}, "", false);
+        params_.declare("release_arms_steps", 250, IntRange{1, 1000}, "", false);
+        params_.declare("release_arms_interval_ms", 20, IntRange{1, 100}, "", false);
+        params_.declare("hand_pose_steps", 100, IntRange{1, 500}, "", false);
+        params_.declare("hand_pose_interval_ms", 10, IntRange{1, 100}, "", false);
+        params_.declare("controller_frequency_hz", 500, IntRange{100, 1000}, "", false);
+        params_.declare("integral_dead_zone_min", 0, FloatRange{0.0, 0.1}, "", false);
+        params_.declare("integral_dead_zone_max", 0.2, FloatRange{0.01, 2.0}, "", false);
+        params_.declare("integral_clamp", 3000.0, FloatRange{1.0, 10000.0}, "", false);
 
         // ========== Gain parameters (per-profile) ==========
         declare_profile_gains<Default>();
@@ -126,7 +145,12 @@ namespace unitree_interface {
         const auto loco_client_timeout = static_cast<float>(params_.get_double("loco_client_timeout"));
         const auto audio_client_timeout = static_cast<float>(params_.get_double("audio_client_timeout"));
 
-        sdk_wrapper_ = std::make_unique<UnitreeSDKWrapper>(logger_);
+        sdk_wrapper_ = std::make_unique<UnitreeSDKWrapper>(
+            logger_,
+            static_cast<float>(params_.get_double("integral_dead_zone_min")),
+            static_cast<float>(params_.get_double("integral_dead_zone_max")),
+            static_cast<float>(params_.get_double("integral_clamp"))
+        );
 
         if (!sdk_wrapper_->initialize(msc_timeout, loco_client_timeout, audio_client_timeout)) {
             RCLCPP_ERROR(logger_, "Failed to initialize SDK wrapper");
@@ -151,9 +175,11 @@ namespace unitree_interface {
         initialize_services();
         initialize_publishers();
         sdk_wrapper_->set_joint_states_publisher(joint_states_pub_);
+        sdk_wrapper_->set_hand_states_publishers(left_hand_states_pub_, right_hand_states_pub_);
         create_subscriptions();
 
         setup_mode_dependent_subscriptions();
+        setup_mode_dependent_timers();
         publish_current_mode();
         publish_current_profile();
     }
@@ -166,7 +192,9 @@ namespace unitree_interface {
                 unitree_interface_msgs::srv::ChangeControlMode::Response::SharedPtr response
             ) {
                 handle_mode_change_request(request, response); // NOLINT
-            }
+            },
+            rclcpp::ServicesQoS(),
+            service_cbg_
         );
 
         ready_locomotion_service_ = create_service<std_srvs::srv::Trigger>(
@@ -176,7 +204,9 @@ namespace unitree_interface {
                 std_srvs::srv::Trigger::Response::SharedPtr response
             ) {
                 handle_ready_locomotion_request(request, response); // NOLINT
-            }
+            },
+            rclcpp::ServicesQoS(),
+            service_cbg_
         );
 
         release_arms_service_ = create_service<std_srvs::srv::Trigger>(
@@ -186,7 +216,9 @@ namespace unitree_interface {
                 std_srvs::srv::Trigger::Response::SharedPtr response
             ) {
                 handle_release_arms_request(request, response); // NOLINT
-            }
+            },
+            rclcpp::ServicesQoS(),
+            service_cbg_
         );
 
         reset_integral_error_service_ = create_service<std_srvs::srv::Trigger>(
@@ -196,7 +228,9 @@ namespace unitree_interface {
                 std_srvs::srv::Trigger::Response::SharedPtr response
             ) {
                 handle_reset_integral_error_request(request, response); // NOLINT
-            }
+            },
+            rclcpp::ServicesQoS(),
+            service_cbg_
         );
 
         set_profile_service_ = create_service<unitree_interface_msgs::srv::SetProfile>(
@@ -206,7 +240,21 @@ namespace unitree_interface {
                 unitree_interface_msgs::srv::SetProfile::Response::SharedPtr response
             ) {
                 handle_set_profile_request(request, response); // NOLINT
-            }
+            },
+            rclcpp::ServicesQoS(),
+            service_cbg_
+        );
+
+        set_hand_pose_service_ = create_service<unitree_interface_msgs::srv::SetHandPose>(
+            params_.get_string("set_hand_pose_service_name"),
+            [this](
+                const unitree_interface_msgs::srv::SetHandPose::Request::SharedPtr request, // NOLINT
+                unitree_interface_msgs::srv::SetHandPose::Response::SharedPtr response
+            ) {
+                handle_set_hand_pose_request(request, response); // NOLINT
+            },
+            rclcpp::ServicesQoS(),
+            service_cbg_
         );
 
         RCLCPP_INFO(logger_, "Services created");
@@ -232,16 +280,30 @@ namespace unitree_interface {
             rclcpp::QoS(10) // NOLINT
         );
 
+        left_hand_states_pub_ = create_publisher<sensor_msgs::msg::JointState>(
+            params_.get_string("left_hand_states_topic"),
+            rclcpp::QoS(10) // NOLINT
+        );
+
+        right_hand_states_pub_ = create_publisher<sensor_msgs::msg::JointState>(
+            params_.get_string("right_hand_states_topic"),
+            rclcpp::QoS(10) // NOLINT
+        );
+
         RCLCPP_INFO(logger_, "Publishers created");
     }
 
     void UnitreeInterface::create_subscriptions() {
+        rclcpp::SubscriptionOptions estop_options;
+        estop_options.callback_group = estop_cbg_;
+
         estop_sub_ = create_subscription<std_msgs::msg::Empty>(
             params_.get_string("estop_topic"),
             rclcpp::QoS(1),
             [this](const std_msgs::msg::Empty::SharedPtr) { // NOLINT
                 estop_callback();
-            }
+            },
+            estop_options
         );
 
         tts_sub_ = create_subscription<std_msgs::msg::String>(
@@ -258,13 +320,14 @@ namespace unitree_interface {
         // NOTE: Do not reset estop_sub_ if you value your life
         cmd_vel_sub_.reset();
         cmd_arm_sub_.reset();
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
         cmd_low_sub_.reset();
-#endif
+
+        rclcpp::SubscriptionOptions cmd_options;
+        cmd_options.callback_group = command_cbg_;
 
         // Create subscriptions based on current mode
         std::visit(
-            [this](auto&& mode){
+            [this, &cmd_options](auto&& mode){
                 using ModeType = std::decay_t<decltype(mode)>;
 
                 if constexpr (
@@ -283,7 +346,8 @@ namespace unitree_interface {
                         rclcpp::QoS(10), // NOLINT
                         [this](const geometry_msgs::msg::TwistStamped::SharedPtr message) { // NOLINT
                             cmd_vel_callback(message);
-                        }
+                        },
+                        cmd_options
                     );
 
                     cmd_arm_sub_ = create_subscription<sensor_msgs::msg::JointState>(
@@ -291,7 +355,8 @@ namespace unitree_interface {
                         rclcpp::QoS(10), // NOLINT
                         [this](const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
                             cmd_arm_callback(message);
-                        }
+                        },
+                        cmd_options
                     );
 
                     RCLCPP_INFO(
@@ -299,21 +364,82 @@ namespace unitree_interface {
                         "%s: subscriptions created",
                         ControlModeTraits<HighLevelMode>::name()
                     );
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
                 } else if constexpr (std::is_same_v<ModeType, LowLevelMode>) {
                     cmd_low_sub_ = create_subscription<sensor_msgs::msg::JointState>(
                         params_.get_string("cmd_low_topic"),
                         rclcpp::QoS(10), // NOLINT
                         [this](const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
                             cmd_low_callback(message);
-                        }
+                        },
+                        cmd_options
                     );
-#endif
                 } else {
                     static_assert(always_false<ModeType>::value, "Illegal mode");
                 }
             },
             current_mode_
+        );
+    }
+
+    void UnitreeInterface::setup_mode_dependent_timers() {
+        control_loop_timer_.reset();
+
+        std::visit(
+            [this](auto&& mode) {
+                using ModeType = std::decay_t<decltype(mode)>;
+
+                if constexpr (std::is_same_v<ModeType, HighLevelMode>) {
+                    const auto frequency = params_.get_int("controller_frequency_hz");
+                    const auto period = std::chrono::duration<double>(1.0 / frequency);
+
+                    control_loop_timer_ = create_wall_timer(
+                        std::chrono::duration_cast<std::chrono::nanoseconds>(period),
+                        [this]() { control_loop(); },
+                        controller_cbg_
+                    );
+
+                    RCLCPP_INFO(
+                        logger_,
+                        "Control loop started at %d Hz",
+                        frequency
+                    );
+                }
+            },
+            current_mode_
+        );
+    }
+
+    void UnitreeInterface::control_loop() {
+        if (releasing_arms_) { return; }
+        if (!setpoint_valid_) { return; }
+
+        embodiment::ResolvedCommand cmd;
+        std::array<float, embodiment::num_joints> kp_snapshot;
+        std::array<float, embodiment::num_joints> kd_snapshot;
+        std::array<float, embodiment::num_joints> ki_snapshot;
+
+        {
+            std::lock_guard lock(setpoint_mutex_);
+            cmd = setpoint_;
+        }
+        {
+            std::shared_lock lock(state_mutex_);
+            kp_snapshot = current_kp_;
+            kd_snapshot = current_kd_;
+            ki_snapshot = current_ki_;
+        }
+
+        const float dt = 1.0F / static_cast<float>(params_.get_int("controller_frequency_hz"));
+
+        sdk_wrapper_->send_arm_commands(
+            cmd.active,
+            cmd.position,
+            cmd.velocity,
+            cmd.effort,
+            kp_snapshot,
+            kd_snapshot,
+            ki_snapshot,
+            dt
         );
     }
 
@@ -338,15 +464,15 @@ namespace unitree_interface {
 
         const std::string prefix = std::string(profile_name) + "/";
 
-        for (std::size_t i = 0; i < joints::num_joints; ++i) {
+        for (std::size_t i = 0; i < embodiment::num_joints; ++i) {
             current_kp_[i] = static_cast<float>(
-                params_.get_double(prefix + "kp/" + joints::joint_names[i])
+                params_.get_double(prefix + "kp/" + embodiment::joint_names[i])
             );
             current_kd_[i] = static_cast<float>(
-                params_.get_double(prefix + "kd/" + joints::joint_names[i])
+                params_.get_double(prefix + "kd/" + embodiment::joint_names[i])
             );
             current_ki_[i] = static_cast<float>(
-                params_.get_double(prefix + "ki/" + joints::joint_names[i])
+                params_.get_double(prefix + "ki/" + embodiment::joint_names[i])
             );
         }
     }
@@ -360,28 +486,36 @@ namespace unitree_interface {
 
         RCLCPP_INFO(logger_, "Mode change request: %d", requested_mode);
 
-        auto [new_mode, success] = try_transition_to(
-            current_mode_,
-            requested_mode,
-            *sdk_wrapper_
-        );
+        {
+            std::unique_lock lock(state_mutex_);
 
-        current_mode_ = new_mode;
-
-        response->success = success;
-
-        if (success) {
-            RCLCPP_INFO(logger_, "Mode transition successful");
-
-            sdk_wrapper_->reset_integral_error();
-            setup_mode_dependent_subscriptions();
-            publish_current_mode();
+            bool success{false};
+            std::tie(current_mode_, success) = try_transition_to(
+                current_mode_,
+                requested_mode,
+                *sdk_wrapper_
+            );
 
             response->success = success;
-            response->message = "Mode transition successful";
-        } else {
-            response->message = "Mode transition failed";
-            RCLCPP_WARN(logger_, "Mode transition failed");
+
+            if (success) {
+                RCLCPP_INFO(logger_, "Mode transition successful");
+
+                sdk_wrapper_->reset_integral_error();
+                setpoint_valid_ = false;
+                setup_mode_dependent_subscriptions();
+                setup_mode_dependent_timers();
+
+                response->success = success;
+                response->message = "Mode transition successful";
+            } else {
+                response->message = "Mode transition failed";
+                RCLCPP_WARN(logger_, "Mode transition failed");
+            }
+        }
+
+        if (response->success) {
+            publish_current_mode();
         }
     }
 
@@ -389,63 +523,94 @@ namespace unitree_interface {
         const std_srvs::srv::Trigger::Request::SharedPtr, // NOLINT
         std_srvs::srv::Trigger::Response::SharedPtr response // NOLINT
     ) {
-        if (std::holds_alternative<HighLevelMode>(current_mode_)) {
-            RCLCPP_INFO(logger_, "Ready locomotion sequence requested");
+        {
+            std::shared_lock lock(state_mutex_);
 
-            const auto stand_up_delay = params_.get_int("ready_locomotion_stand_up_delay");
-            const auto start_delay = params_.get_int("ready_locomotion_start_delay");
-
-            if (!sdk_wrapper_->damp_high()) {
+            if (!std::holds_alternative<HighLevelMode>(current_mode_)) {
                 response->success = false;
-                response->message = "damp() failed";
+                response->message = "Ready locomotion sequence attempted while not in HighLevelMode";
+                RCLCPP_WARN(logger_, "Ready locomotion sequence attempted while not in HighLevelMode");
                 return;
             }
-
-            std::this_thread::sleep_for(std::chrono::seconds(stand_up_delay));
-
-            if (!sdk_wrapper_->stand_up()) {
-                response->success = false;
-                response->message = "stand_up() failed";
-                return;
-            }
-
-            std::this_thread::sleep_for(std::chrono::seconds(start_delay));
-
-            if (!sdk_wrapper_->start()) {
-                response->success = false;
-                response->message = "start() failed";
-                return;
-            }
-
-            response->success = true;
-            response->message = "Locomotion ready";
-            RCLCPP_INFO(logger_, "Locomotion ready sequence completed");
-        } else {
-            response->success = false;
-            response->message = "Ready locomotion sequence attempted while not in HighLevelMode";
-            RCLCPP_WARN(logger_, "Ready locomotion sequence attempted while not in HighLevelMode");
         }
+
+        RCLCPP_INFO(logger_, "Ready locomotion sequence requested");
+
+        const auto stand_up_delay = params_.get_int("ready_locomotion_stand_up_delay");
+        const auto start_delay = params_.get_int("ready_locomotion_start_delay");
+
+        if (!sdk_wrapper_->damp_high()) {
+            response->success = false;
+            response->message = "damp() failed";
+            return;
+        }
+
+        std::this_thread::sleep_for(std::chrono::seconds(stand_up_delay));
+
+        {
+            std::shared_lock lock(state_mutex_);
+
+            if (std::holds_alternative<EmergencyMode>(current_mode_)) {
+                response->success = false;
+                response->message = "Aborted: estop triggered during ready_locomotion";
+                return;
+            }
+        }
+
+        if (!sdk_wrapper_->stand_up()) {
+            response->success = false;
+            response->message = "stand_up() failed";
+            return;
+        }
+
+        std::this_thread::sleep_for(std::chrono::seconds(start_delay));
+
+        {
+            std::shared_lock lock(state_mutex_);
+
+            if (std::holds_alternative<EmergencyMode>(current_mode_)) {
+                response->success = false;
+                response->message = "Aborted: estop triggered during ready_locomotion";
+                return;
+            }
+        }
+
+        if (!sdk_wrapper_->start()) {
+            response->success = false;
+            response->message = "start() failed";
+            return;
+        }
+
+        response->success = true;
+        response->message = "Locomotion ready";
+        RCLCPP_INFO(logger_, "Locomotion ready sequence completed");
     }
 
     void UnitreeInterface::handle_release_arms_request(
         const std_srvs::srv::Trigger::Request::SharedPtr, // NOLINT
         std_srvs::srv::Trigger::Response::SharedPtr response // NOLINT
     ) {
-        if (std::holds_alternative<HighLevelMode>(current_mode_)) {
-            const auto steps = params_.get_int("release_arms_steps");
-            const auto interval_ms = params_.get_int("release_arms_interval_ms");
+        {
+            std::shared_lock lock(state_mutex_);
 
-            releasing_arms_ = true;
-            sdk_wrapper_->release_arms(steps, interval_ms);
-            releasing_arms_ = false;
-
-            response->success = true;
-            response->message = "Arms released";
-        } else {
-            response->success = false;
-            response->message = "Not in HighLevelMode";
-            RCLCPP_WARN(logger_, "Release arms requested while not in HighLevelMode");
+            if (!std::holds_alternative<HighLevelMode>(current_mode_)) {
+                response->success = false;
+                response->message = "Not in HighLevelMode";
+                RCLCPP_WARN(logger_, "Release arms requested while not in HighLevelMode");
+                return;
+            }
         }
+
+        const auto steps = params_.get_int("release_arms_steps");
+        const auto interval_ms = params_.get_int("release_arms_interval_ms");
+
+        releasing_arms_ = true;
+        setpoint_valid_ = false;
+        sdk_wrapper_->release_arms(steps, interval_ms);
+        releasing_arms_ = false;
+
+        response->success = true;
+        response->message = "Arms released";
     }
 
     void UnitreeInterface::handle_set_profile_request(
@@ -454,37 +619,41 @@ namespace unitree_interface {
     ) {
         const std::uint8_t requested = request->requested_profile;
 
-        switch (requested) {
-            case unitree_interface_msgs::msg::Profile::PROFILE_DEFAULT:
-                current_profile_ = Default{};
-                break;
-            case unitree_interface_msgs::msg::Profile::PROFILE_DAMP:
-                current_profile_ = Damp{};
-                break;
-            case unitree_interface_msgs::msg::Profile::PROFILE_VISUAL_SERVO:
-                current_profile_ = VisualServo{};
-                break;
-            case unitree_interface_msgs::msg::Profile::PROFILE_WHOLE_BODY_CONTROL:
-                current_profile_ = WholeBodyControl{};
-                break;
-            case unitree_interface_msgs::msg::Profile::PROFILE_EFFORT_ONLY:
-                current_profile_ = EffortOnly{};
-                break;
-            default:
-                response->success = false;
-                response->message = "Unknown profile ID";
-                RCLCPP_WARN(logger_, "Unknown profile ID: %d", requested);
-                return;
-        }
+        {
+            std::unique_lock lock(state_mutex_);
 
-        sdk_wrapper_->reset_integral_error();
-        apply_profile_gains(current_profile_);
+            switch (requested) {
+                case unitree_interface_msgs::msg::Profile::PROFILE_DEFAULT:
+                    current_profile_ = Default{};
+                    break;
+                case unitree_interface_msgs::msg::Profile::PROFILE_DAMP:
+                    current_profile_ = Damp{};
+                    break;
+                case unitree_interface_msgs::msg::Profile::PROFILE_VISUAL_SERVO:
+                    current_profile_ = VisualServo{};
+                    break;
+                case unitree_interface_msgs::msg::Profile::PROFILE_WHOLE_BODY_CONTROL:
+                    current_profile_ = WholeBodyControl{};
+                    break;
+                case unitree_interface_msgs::msg::Profile::PROFILE_EFFORT_ONLY:
+                    current_profile_ = EffortOnly{};
+                    break;
+                default:
+                    response->success = false;
+                    response->message = "Unknown profile ID";
+                    RCLCPP_WARN(logger_, "Unknown profile ID: %d", requested);
+                    return;
+            }
+
+            sdk_wrapper_->reset_integral_error();
+            apply_profile_gains(current_profile_);
+        }
         publish_current_profile();
 
         response->success = true;
         response->message = std::visit(
-            [](const auto& p) -> std::string {
-                using ProfileType = std::decay_t<decltype(p)>;
+            [](const auto& profile) -> std::string {
+                using ProfileType = std::decay_t<decltype(profile)>;
 
                 return std::string("Profile set to: ") + ProfileTraits<ProfileType>::name();
             },
@@ -505,8 +674,74 @@ namespace unitree_interface {
         response->message = "Integral error reset";
     }
 
+    void UnitreeInterface::handle_set_hand_pose_request(
+        const unitree_interface_msgs::srv::SetHandPose::Request::SharedPtr request, // NOLINT
+        unitree_interface_msgs::srv::SetHandPose::Response::SharedPtr response // NOLINT
+    ) {
+        {
+            std::shared_lock lock(state_mutex_);
+
+            if (!std::holds_alternative<HighLevelMode>(current_mode_)) {
+                response->success = false;
+                response->message = "Not in HighLevelMode";
+                RCLCPP_WARN(logger_, "Hand pose requested while not in HighLevelMode");
+                return;
+            }
+        }
+
+        const auto side = (request->target_hand == unitree_interface_msgs::srv::SetHandPose::Request::HAND_LEFT)
+            ? hands::Side::Left
+            : hands::Side::Right;
+
+        const std::array<float, hands::num_joints>* target = nullptr;
+
+        switch (request->target_pose) {
+            case unitree_interface_msgs::srv::SetHandPose::Request::POSE_BALL:
+                target = (side == hands::Side::Left) ? &hands::ball_left : &hands::ball_right;
+                break;
+            case unitree_interface_msgs::srv::SetHandPose::Request::POSE_POINT:
+                target = (side == hands::Side::Left) ? &hands::point_left : &hands::point_right;
+                break;
+            default:
+                response->success = false;
+                response->message = "Unknown pose ID";
+                return;
+        }
+
+        const auto steps = params_.get_int("hand_pose_steps");
+        const auto interval_ms = params_.get_int("hand_pose_interval_ms");
+        const auto interval = std::chrono::milliseconds(interval_ms);
+
+        const auto start_pos = sdk_wrapper_->get_hand_position(side);
+
+        for (int step = 0; step <= steps; ++step) {
+            const float t = static_cast<float>(step) / static_cast<float>(steps);
+
+            std::array<float, hands::num_joints> interpolated{};
+            for (std::size_t i = 0; i < hands::num_joints; ++i) {
+                interpolated[i] = start_pos[i] + t * ((*target)[i] - start_pos[i]);
+            }
+
+            sdk_wrapper_->send_hand_command(side, interpolated);
+    
+            std::this_thread::sleep_for(interval);
+        }
+
+        const auto side_name = (side == hands::Side::Left) ? "left" : "right";
+        response->success = true;
+        response->message = std::string("Hand pose set for ") + side_name;
+        RCLCPP_INFO(logger_, "%s", response->message.c_str());
+    }
+
     void UnitreeInterface::cmd_vel_callback(const geometry_msgs::msg::TwistStamped::SharedPtr message) { // NOLINT
-        if (std::holds_alternative<HighLevelMode>(current_mode_)) {
+        ControlMode mode_snapshot;
+        {
+            std::shared_lock lock(state_mutex_);
+
+            mode_snapshot = current_mode_;
+        }
+
+        if (std::holds_alternative<HighLevelMode>(mode_snapshot)) {
             const auto vx = static_cast<float>(message->twist.linear.x); // m/s
             const auto vy = static_cast<float>(message->twist.linear.y); // m/s
             const auto vyaw = static_cast<float>(message->twist.angular.z); // rad/s
@@ -533,91 +768,69 @@ namespace unitree_interface {
             return;
         }
 
-        if (std::holds_alternative<HighLevelMode>(current_mode_)) {
-            auto [indices, position, velocity, effort, kp, kd, ki] =
-                joints::resolve_joint_commands(
-                    message->name,
-                    message->position,
-                    message->velocity,
-                    message->effort,
-                    current_kp_,
-                    current_kd_,
-                    current_ki_
-                );
+        auto cmd = embodiment::resolve_names(
+            message->name,
+            message->position,
+            message->velocity,
+            message->effort,
+            embodiment::upper_body
+        );
 
-            for (std::size_t i = 0; i < indices.size(); ++i) {
-                const auto joint_index = static_cast<joints::JointIndex>(indices[i]);
-
-                if (!joints::contains(joints::upper_body, joint_index)) {
-                    position[i] = 0.0F;
-                    velocity[i] = 0.0F;
-                    effort[i] = 0.0F;
-                    kp[i] = 0.0F;
-                    kd[i] = 0.0F;
-                    ki[i] = 0.0F;
-                }
-            }
-
-            sdk_wrapper_->send_arm_commands(
-                indices,
-                position,
-                velocity,
-                effort,
-                kp,
-                kd,
-                ki
-            );
-        } else {
-            RCLCPP_WARN_THROTTLE(
-                logger_,
-                *get_clock(),
-                1000,
-                "Received cmd_arm but not in HighLevelMode"
-            );
+        {
+            std::lock_guard lock(setpoint_mutex_);
+            setpoint_ = cmd;
         }
+        setpoint_valid_ = true;
     }
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     void UnitreeInterface::cmd_low_callback(const sensor_msgs::msg::JointState::SharedPtr message) { // NOLINT
-        if (std::holds_alternative<LowLevelMode>(current_mode_)) {
-            auto [indices, position, velocity, effort, kp, kd, ki] =
-                joints::resolve_joint_commands(
-                    message->name,
-                    message->position,
-                    message->velocity,
-                    message->effort,
-                    current_kp_,
-                    current_kd_,
-                    current_ki_
-                );
+        std::array<float, embodiment::num_joints> kp_snapshot;
+        std::array<float, embodiment::num_joints> kd_snapshot;
+        std::array<float, embodiment::num_joints> ki_snapshot;
+        {
+            std::shared_lock lock(state_mutex_);
 
-            sdk_wrapper_->send_low_commands(
-                indices,
-                position,
-                velocity,
-                effort,
-                kp,
-                kd,
-                ki
-            );
-        } else {
-            RCLCPP_WARN_THROTTLE(
-                logger_,
-                *get_clock(),
-                1000,
-                "Received cmd_low but not in LowLevelMode"
-            );
+            if (!std::holds_alternative<LowLevelMode>(current_mode_)) {
+                RCLCPP_WARN_THROTTLE(
+                    logger_,
+                    *get_clock(),
+                    1000,
+                    "Received cmd_low but not in LowLevelMode"
+                );
+                return;
+            }
+            kp_snapshot = current_kp_;
+            kd_snapshot = current_kd_;
+            ki_snapshot = current_ki_;
         }
+
+        auto cmd = embodiment::resolve_names(
+            message->name,
+            message->position,
+            message->velocity,
+            message->effort,
+            embodiment::all_joints
+        );
+
+        sdk_wrapper_->send_low_commands(
+            cmd.active,
+            cmd.position,
+            cmd.velocity,
+            cmd.effort,
+            kp_snapshot,
+            kd_snapshot,
+            ki_snapshot
+        );
     }
-#endif
 
     void UnitreeInterface::estop_callback() {
-        // TODO: Figure out how to implement the low-level estop here
-        auto [new_mode, _] = try_transition<EmergencyMode>(current_mode_, *sdk_wrapper_);
+        std::unique_lock lock(state_mutex_);
 
-        current_mode_ = new_mode;
+        std::tie(current_mode_, std::ignore) = try_transition<EmergencyMode>(current_mode_, *sdk_wrapper_);
 
+        setpoint_valid_ = false;
         setup_mode_dependent_subscriptions();
+        setup_mode_dependent_timers();
         publish_current_mode();
     }
 

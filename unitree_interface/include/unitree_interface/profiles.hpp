@@ -1,7 +1,6 @@
 #ifndef VECTOR_PROFILES_HPP
 #define VECTOR_PROFILES_HPP
 
-// #include "unitree_interface/control_modes.hpp"
 #include "unitree_interface/topology.hpp"
 #include "unitree_interface_msgs/msg/profile.hpp"
 
@@ -15,12 +14,12 @@ namespace unitree_interface {
 
     /*
     For each Profile, the joint kp / kd values must be set in the same order as the
-    unitree_interface::joints::JointIndex definition.
+    unitree_interface::embodiment::JointIndex definition.
     */
 
     // ========== Default ==========
     struct Default {
-        static constexpr std::array<float, joints::num_joints> kp {
+        static constexpr std::array<float, embodiment::num_joints> kp {
             // Left leg
             10.0F,
             10.0F,
@@ -43,25 +42,25 @@ namespace unitree_interface {
             150.0F,
 
             // Left arm
-            14.2F,
-            14.2F,
-            14.2F,
-            14.2F,
-            14.2F,
-            16.7F,
-            16.7F,
+            80.0F,
+            80.0F,
+            80.0F,
+            150.0F,
+            40.0F,
+            40.0F,
+            40.0F,
 
             // Right arm
-            14.2F,
-            14.2F,
-            14.2F,
-            14.2F,
-            14.2F,
-            16.7F,
-            16.7F,
+            80.0F,
+            80.0F,
+            80.0F,
+            150.0F,
+            40.0F,
+            40.0F,
+            40.0F
         };
 
-        static constexpr std::array<float, joints::num_joints> kd {
+        static constexpr std::array<float, embodiment::num_joints> kd {
             // Left leg
             2.0F,
             2.0F,
@@ -84,25 +83,25 @@ namespace unitree_interface {
             2.0F,
 
             // Left arm
-            2.5F,
-            2.5F,
-            2.5F,
-            3.5F,
+            4.0F,
+            4.0F,
+            4.0F,
+            4.0F,
             1.5F,
             1.5F,
-            1.06F,
+            1.5F,
 
             // Right arm
-            2.5F,
-            2.5F,
-            2.5F,
-            3.5F,
+            4.0F,
+            4.0F,
+            4.0F,
+            4.0F,
             1.5F,
             1.5F,
-            1.06F,
+            1.5F,
         };
 
-        static constexpr std::array<float, joints::num_joints> ki {};
+        static constexpr std::array<float, embodiment::num_joints> ki {};
     };
 
     template <>
@@ -115,9 +114,9 @@ namespace unitree_interface {
     // ========== Damp ==========
     // TODO: Test these
     struct Damp {
-        static constexpr std::array<float, joints::num_joints> kp {};
+        static constexpr std::array<float, embodiment::num_joints> kp {};
 
-        static constexpr std::array<float, joints::num_joints> kd {
+        static constexpr std::array<float, embodiment::num_joints> kd {
             // Left leg
             8.0F,
             8.0F,
@@ -158,7 +157,7 @@ namespace unitree_interface {
             8.0F,
         };
 
-        static constexpr std::array<float, joints::num_joints> ki {};
+        static constexpr std::array<float, embodiment::num_joints> ki {};
     };
 
     template <>
@@ -171,11 +170,11 @@ namespace unitree_interface {
     // ========== VisualServo ==========
     // TODO: Tune these
     struct VisualServo {
-        static constexpr std::array<float, joints::num_joints> kp = Default::kp;
+        static constexpr std::array<float, embodiment::num_joints> kp = Default::kp;
 
-        static constexpr std::array<float, joints::num_joints> kd = Default::kd;
+        static constexpr std::array<float, embodiment::num_joints> kd = Default::kd;
 
-        static constexpr std::array<float, joints::num_joints> ki {
+        static constexpr std::array<float, embodiment::num_joints> ki {
             // Left leg
             0.0F,
             0.0F,
@@ -198,22 +197,22 @@ namespace unitree_interface {
             0.0F,
 
             // Left arm
-            1.5F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
+            100.0F,
+            100.0F,
+            60.0F,
+            150.0F,
+            100.0F,
+            60.0F,
+            60.0F,
 
             // Right arm
-            1.5F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
-            2.28882F,
+            100.0F,
+            100.0F,
+            60.0F,
+            150.0F,
+            100.0F,
+            60.0F,
+            60.0F,
         };
     };
 
@@ -227,11 +226,11 @@ namespace unitree_interface {
     // ========== WholeBodyControl ==========
     // TODO: Tune these
     struct WholeBodyControl {
-        static constexpr std::array<float, joints::num_joints> kp = Default::kp;
+        static constexpr std::array<float, embodiment::num_joints> kp = Default::kp;
 
-        static constexpr std::array<float, joints::num_joints> kd = Default::kd;
+        static constexpr std::array<float, embodiment::num_joints> kd = Default::kd;
 
-        static constexpr std::array<float, joints::num_joints> ki = Default::ki;
+        static constexpr std::array<float, embodiment::num_joints> ki = Default::ki;
     };
 
     template <>
@@ -243,11 +242,11 @@ namespace unitree_interface {
 
     // ========== EffortOnly ==========
     struct EffortOnly {
-        static constexpr std::array<float, joints::num_joints> kp {};
+        static constexpr std::array<float, embodiment::num_joints> kp {};
 
-        static constexpr std::array<float, joints::num_joints> kd {};
+        static constexpr std::array<float, embodiment::num_joints> kd {};
 
-        static constexpr std::array<float, joints::num_joints> ki {};
+        static constexpr std::array<float, embodiment::num_joints> ki {};
     };
 
     template <>

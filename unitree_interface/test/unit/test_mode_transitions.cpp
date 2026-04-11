@@ -20,11 +20,9 @@ TEST(TransitionLegalityTest, FromMonostate_ToHighLevel_NotAllowed) {
     EXPECT_FALSE(ui::can_transition<ui::HighLevelMode>(ui::ControlMode{std::monostate{}}));
 }
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
 TEST(TransitionLegalityTest, FromMonostate_ToLowLevel_NotAllowed) {
     EXPECT_FALSE(ui::can_transition<ui::LowLevelMode>(ui::ControlMode{std::monostate{}}));
 }
-#endif
 
 TEST(TransitionLegalityTest, FromMonostate_ToEmergency_Allowed) {
     EXPECT_TRUE(ui::can_transition<ui::EmergencyMode>(ui::ControlMode{std::monostate{}}));
@@ -43,11 +41,9 @@ TEST(TransitionLegalityTest, FromIdle_ToHighLevel_Allowed) {
     EXPECT_TRUE(ui::can_transition<ui::HighLevelMode>(ui::ControlMode{ui::IdleMode{}}));
 }
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
 TEST(TransitionLegalityTest, FromIdle_ToLowLevel_Allowed) {
     EXPECT_TRUE(ui::can_transition<ui::LowLevelMode>(ui::ControlMode{ui::IdleMode{}}));
 }
-#endif
 
 TEST(TransitionLegalityTest, FromIdle_ToEmergency_Allowed) {
     EXPECT_TRUE(ui::can_transition<ui::EmergencyMode>(ui::ControlMode{ui::IdleMode{}}));
@@ -66,17 +62,14 @@ TEST(TransitionLegalityTest, FromHighLevel_ToHighLevel_NotAllowed) {
     EXPECT_FALSE(ui::can_transition<ui::HighLevelMode>(ui::ControlMode{ui::HighLevelMode{}}));
 }
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
 TEST(TransitionLegalityTest, FromHighLevel_ToLowLevel_Allowed) {
     EXPECT_TRUE(ui::can_transition<ui::LowLevelMode>(ui::ControlMode{ui::HighLevelMode{}}));
 }
-#endif
 
 TEST(TransitionLegalityTest, FromHighLevel_ToEmergency_Allowed) {
     EXPECT_TRUE(ui::can_transition<ui::EmergencyMode>(ui::ControlMode{ui::HighLevelMode{}}));
 }
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
 // ========== ui::LowLevelMode ==========
 TEST(TransitionLegalityTest, FromLowLevel_ToMonostate_NotAllowed) {
     EXPECT_FALSE(ui::can_transition<std::monostate>(ui::ControlMode{ui::LowLevelMode{}}));
@@ -97,7 +90,6 @@ TEST(TransitionLegalityTest, FromLowLevel_ToLowLevel_NotAllowed) {
 TEST(TransitionLegalityTest, FromLowLevel_ToEmergency_Allowed) {
     EXPECT_TRUE(ui::can_transition<ui::EmergencyMode>(ui::ControlMode{ui::LowLevelMode{}}));
 }
-#endif
 
 // ========== ui::EmergencyMode ==========
 TEST(TransitionLegalityTest, FromEmergency_ToMonostate_NotAllowed) {
@@ -112,11 +104,9 @@ TEST(TransitionLegalityTest, FromEmergency_ToHighLevel_NotAllowed) {
     EXPECT_FALSE(ui::can_transition<ui::HighLevelMode>(ui::ControlMode{ui::EmergencyMode{}}));
 }
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
 TEST(TransitionLegalityTest, FromEmergency_ToLowLevel_NotAllowed) {
     EXPECT_FALSE(ui::can_transition<ui::LowLevelMode>(ui::ControlMode{ui::EmergencyMode{}}));
 }
-#endif
 
 TEST(TransitionLegalityTest, FromEmergency_ToEmergency_NotAllowed) {
     EXPECT_FALSE(ui::can_transition<ui::EmergencyMode>(ui::ControlMode{ui::EmergencyMode{}}));
@@ -131,7 +121,7 @@ protected:
 };
 
 TEST_F(TryTransitionToTest, InvalidIDReturnsFailure) {
-    ui::UnitreeSDKWrapper wrapper(logger_);
+    ui::UnitreeSDKWrapper wrapper(logger_, 0.001F, 0.4F, 1000.0F);
     ui::ControlMode from{ui::IdleMode{}};
 
     constexpr std::uint8_t invalid_id = 255;
@@ -142,7 +132,7 @@ TEST_F(TryTransitionToTest, InvalidIDReturnsFailure) {
 }
 
 TEST_F(TryTransitionToTest, MonostateIDReturnsFailure) {
-    ui::UnitreeSDKWrapper wrapper(logger_);
+    ui::UnitreeSDKWrapper wrapper(logger_, 0.001F, 0.4F, 1000.0F);
     ui::ControlMode from{ui::IdleMode{}};
 
     // Transitioning to monostate is never valid
@@ -157,7 +147,7 @@ TEST_F(TryTransitionToTest, MonostateIDReturnsFailure) {
 }
 
 TEST_F(TryTransitionToTest, EmergencyIDNotInSwitchReturnsFailure) {
-    ui::UnitreeSDKWrapper wrapper(logger_);
+    ui::UnitreeSDKWrapper wrapper(logger_, 0.001F, 0.4F, 1000.0F);
     ui::ControlMode from{ui::IdleMode{}};
 
     // Emergency is not in the switch (intentionally - use estop)

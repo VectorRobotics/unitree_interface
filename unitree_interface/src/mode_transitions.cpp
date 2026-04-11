@@ -51,7 +51,6 @@ namespace unitree_interface {
         return IdleMode{};
     }
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     ControlMode Transition<IdleMode, LowLevelMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
         if (!sdk_wrapper.has_active_mode() || sdk_wrapper.release_mode()) {
             return LowLevelMode{};
@@ -59,7 +58,6 @@ namespace unitree_interface {
 
         return IdleMode{};
     }
-#endif
 
     ControlMode Transition<IdleMode, EmergencyMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
         if (sdk_wrapper.has_active_mode()) {
@@ -83,7 +81,6 @@ namespace unitree_interface {
         return IdleMode{};
     }
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     ControlMode Transition<HighLevelMode, LowLevelMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
         if (!sdk_wrapper.has_active_mode() || sdk_wrapper.release_mode()) {
             return LowLevelMode{};
@@ -91,7 +88,6 @@ namespace unitree_interface {
 
         return HighLevelMode{};
     }
-#endif
 
     ControlMode Transition<HighLevelMode, EmergencyMode>::execute(UnitreeSDKWrapper& sdk_wrapper) {
         if (sdk_wrapper.damp_high()) {
@@ -101,7 +97,6 @@ namespace unitree_interface {
         return HighLevelMode{};
     }
 
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
     // ========== LowLevelMode ==========
     ControlMode Transition<LowLevelMode, IdleMode>::execute(UnitreeSDKWrapper& _) {
         return IdleMode{};
@@ -120,7 +115,6 @@ namespace unitree_interface {
 
         return EmergencyMode{};
     }
-#endif
 
     // ========== Helper functions ==========
     TransitionResult try_transition_to(
@@ -135,11 +129,9 @@ namespace unitree_interface {
             case ControlModeTraits<HighLevelMode>::id:
                 return try_transition<HighLevelMode>(from, sdk_wrapper);
                 break;
-#ifdef UNITREE_INTERFACE_ENABLE_LOW_LEVEL_MODE
             case ControlModeTraits<LowLevelMode>::id:
                 return try_transition<LowLevelMode>(from, sdk_wrapper);
                 break;
-#endif
             default:
                 return {from, false};
         }
