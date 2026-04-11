@@ -400,7 +400,7 @@ namespace unitree_interface {
             command.motor_cmd().at(i).mode() = 1;
             command.motor_cmd().at(i).q()    = position[i];
             command.motor_cmd().at(i).dq()   = velocity[i];
-            command.motor_cmd().at(i).tau()   = std::clamp(effort[i], -embodiment::effort_limit[i], embodiment::effort_limit[i]);
+            command.motor_cmd().at(i).tau()  = std::clamp(effort[i], -embodiment::effort_limit[i], embodiment::effort_limit[i]);
             command.motor_cmd().at(i).kp()   = kp[i];
             command.motor_cmd().at(i).kd()   = kd[i];
         }
@@ -450,13 +450,15 @@ namespace unitree_interface {
 
                 // Trapezoidal integration with dead zone
                 if (abs_error >= integral_dead_zone_min_ && abs_error < integral_dead_zone_max_) {
-                    integral_error_[i] += ki[i] * 0.5F * (error + previous_error_[i]);
+                    integral_term_[i] += ki[i] * 0.5F * (error + previous_error_[i]) * dt;
                 }
+
+                // Update error outside so that the trapezoid is well-formed
                 previous_error_[i] = error;
 
-                integral_error_[i] = std::clamp(integral_error_[i], -integral_clamp_, integral_clamp_);
+                integral_term_[i] = std::clamp(integral_term_[i], -integral_clamp_, integral_clamp_);
                 adjusted_effort[i] = std::clamp(
-                    adjusted_effort[i] + integral_error_[i] * dt,
+                    adjusted_effort[i] + integral_term_[i],
                     -embodiment::effort_limit[i],
                     embodiment::effort_limit[i]
                 );
@@ -504,9 +506,9 @@ namespace unitree_interface {
                 if (!active[i]) { continue; }
 
                 const auto error = position[i] - actual_pos[i];
-                integral_error_[i] += error;
+                integral_term_[i] += error;
 
-                adjusted_effort[i] += ki[i] * integral_error_[i];
+                adjusted_effort[i] += ki[i] * integral_term_[i];
             }
         }
 
@@ -612,7 +614,7 @@ namespace unitree_interface {
     void UnitreeSDKWrapper::reset_integral_error() {
         {
             std::lock_guard lock(integral_mutex_);
-            integral_error_.fill(0.0F);
+            integral_term_.fill(0.0F);
             previous_error_.fill(0.0F);
         }
         RCLCPP_INFO(logger_, "Integral error reset");

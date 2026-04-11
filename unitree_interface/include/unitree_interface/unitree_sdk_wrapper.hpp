@@ -202,7 +202,7 @@ namespace unitree_interface {
         std::array<float, embodiment::num_joints> actual_position_{};
 
         mutable std::mutex integral_mutex_;
-        std::array<float, embodiment::num_joints> integral_error_{};
+        std::array<float, embodiment::num_joints> integral_term_{};
         std::array<float, embodiment::num_joints> previous_error_{};
 
         unitree::robot::ChannelPublisherPtr<LowCmd> arm_sdk_pub_;
