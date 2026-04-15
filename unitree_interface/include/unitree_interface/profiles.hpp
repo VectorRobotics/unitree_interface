@@ -192,7 +192,7 @@ namespace unitree_interface {
             0.0F,
 
             // Waist
-            0.0F,
+            15.0F,
             0.0F,
             0.0F,
 
