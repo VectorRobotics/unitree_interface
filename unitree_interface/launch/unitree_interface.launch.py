@@ -23,7 +23,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'volume',
-            default_value='80',
+            default_value='100',
             description='Volume for the speaker'
         ),
         DeclareLaunchArgument(
