@@ -606,6 +606,7 @@ namespace unitree_interface {
 
         releasing_arms_ = true;
         setpoint_valid_ = false;
+        sdk_wrapper_->reset_integral_error();
         sdk_wrapper_->release_arms(steps, interval_ms);
         releasing_arms_ = false;
 
