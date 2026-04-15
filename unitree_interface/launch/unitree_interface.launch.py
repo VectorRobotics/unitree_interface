@@ -65,7 +65,10 @@ def generate_launch_description():
                 ('/unitree_interface/cmd_arm', '/position_control'),
                 ('/unitree_interface/cmd_low', '/position_control'),
                 ('/unitree_interface/joint_states', '/feedback'),
+                ('/unitree_interface/left_hand_states', '/left_hand_feedback'),
+                ('/unitree_interface/right_hand_states', '/right_hand_feedback'),
                 ('/unitree_interface/cmd_vel', '/cmd_vel'),
+                ('/unitree_interface/tts', '/speak'),
             ],
         ),
     ])
