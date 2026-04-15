@@ -457,11 +457,7 @@ namespace unitree_interface {
                 previous_error_[i] = error;
 
                 integral_term_[i] = std::clamp(integral_term_[i], -integral_clamp_, integral_clamp_);
-                adjusted_effort[i] = std::clamp(
-                    adjusted_effort[i] + integral_term_[i],
-                    -embodiment::effort_limit[i],
-                    embodiment::effort_limit[i]
-                );
+                adjusted_effort[i] = adjusted_effort[i] + integral_term_[i];
             }
         }
 
