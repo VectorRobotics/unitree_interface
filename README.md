@@ -2,6 +2,92 @@
 
 ROS 2 interface for the Unitree G1 humanoid robot (29 DoF). Bridges the Unitree SDK with standard ROS 2 topics and services.
 
+## Building
+
+### Clone
+
+The Unitree SDK is a git submodule. A plain `git clone` leaves
+`unitree_interface/third_party/unitree_sdk2` empty and CMake fails during configure with:
+
+```
+CMake Error at CMakeLists.txt:22 (add_subdirectory):
+  The source directory .../third_party/unitree_sdk2 does not contain a CMakeLists.txt file.
+```
+
+Clone recursively:
+
+```bash
+git clone --recurse-submodules https://github.com/VectorRobotics/unitree_interface.git
+```
+
+If you already cloned without submodules:
+
+```bash
+git submodule update --init --recursive
+```
+
+### Dependencies
+
+Built and tested against ROS 2 Jazzy on Ubuntu 24.04.
+
+Every dependency resolves through `rosdep` except
+[`dynamic_params`](https://github.com/VectorRobotics/vector_robotics/tree/main/src/dynamic_params),
+a thin wrapper around the ROS 2 parameter API. It is used for every runtime parameter this
+node declares, so the build cannot proceed without it:
+
+```
+$ rosdep install --from-paths . --ignore-src
+ERROR[unitree_interface]: Cannot locate rosdep definition for [dynamic_params]
+
+$ colcon build
+CMake Error at CMakeLists.txt:18 (find_package):
+  Could not find a package configuration file provided by "dynamic_params"
+```
+
+`dynamic_params` currently lives in a private repository, which means this package cannot be
+built outside the VectorRobotics organization. See #TODO_ISSUE for tracking.
+
+Build `dynamic_params` into a colcon workspace and source that workspace's overlay before
+building here.
+
+### Build
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source /path/to/dynamic_params_ws/install/setup.bash
+colcon build
+```
+
+## Troubleshooting
+
+### `ModuleNotFoundError: No module named 'em'`
+
+Symptom — message generation for `unitree_interface_msgs` fails during configure:
+
+```
+CMake Error at /opt/ros/jazzy/share/rosidl_adapter/cmake/rosidl_adapt_interfaces.cmake:57 (message):
+  execute_process(/home/you/.local/bin/python3.10 -m rosidl_adapter ...) returned error code 1:
+  ...
+  ModuleNotFoundError: No module named 'em'
+```
+
+Cause — CMake selected a Python interpreter that ROS 2 is not installed under. `FindPython3`
+defaults to `Python3_FIND_STRATEGY=LOCATION`: it walks `PATH` in order and takes the first
+interpreter it finds, *without* comparing versions. If conda, pyenv, uv, or a virtualenv puts
+a `python3.x` on `PATH` ahead of `/usr/bin`, CMake picks that one — and it has neither
+`empy` nor ROS 2's `rosidl_adapter`. Note the interpreter path in the error message: if it is
+not `/usr/bin/python3`, this is your problem.
+
+Fix — point CMake at the interpreter ROS 2 was built against. The stale choice is cached in
+`CMakeCache.txt`, so the build directory must be removed as well:
+
+```bash
+rm -rf build install
+colcon build --cmake-args -DPython3_EXECUTABLE=/usr/bin/python3
+```
+
+Alternatively, keep the interfering interpreter off `PATH` while building.
+
 ## Node
 
 **`unitree_interface`** (default name)
